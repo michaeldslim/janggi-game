@@ -54,8 +54,8 @@ interface BoardProps {
 }
 
 export function BoardContent({ layout }: BoardProps) {
-  const start = intersectionToPixel(0, 0, layout);
-  const end = intersectionToPixel(FILE_COUNT - 1, RANK_COUNT - 1, layout);
+  const borderWidth = 3;
+  const inset = borderWidth / 2;
 
   const verticalLines = Array.from({ length: FILE_COUNT }, (_, file) => {
     const top = intersectionToPixel(file, 0, layout);
@@ -92,13 +92,13 @@ export function BoardContent({ layout }: BoardProps) {
   return (
     <>
       <Rect
-        x={start.x}
-        y={start.y}
-        width={end.x - start.x}
-        height={end.y - start.y}
+        x={inset}
+        y={inset}
+        width={layout.width - borderWidth}
+        height={layout.height - borderWidth}
         fill={colors.boardWood}
         stroke={colors.boardBorder}
-        strokeWidth={3}
+        strokeWidth={borderWidth}
       />
       {verticalLines}
       {horizontalLines}

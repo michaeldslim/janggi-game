@@ -1,5 +1,9 @@
 import { FILE_GAPS, RANK_GAPS } from '../constants/board';
 
+const PIECE_RADIUS_RATIO = 0.38;
+const SELECTION_RING_EXTRA = 4;
+const EDGE_BUFFER = 6;
+
 export interface BoardLayout {
   width: number;
   height: number;
@@ -9,31 +13,34 @@ export interface BoardLayout {
   pieceRadius: number;
 }
 
+function edgePaddingForCellSize(cellSize: number): number {
+  const pieceRadius = cellSize * PIECE_RADIUS_RATIO;
+  return pieceRadius + SELECTION_RING_EXTRA + EDGE_BUFFER;
+}
+
 export function createBoardLayout(
   maxWidth: number,
   maxHeight: number,
-  padding = 12,
 ): BoardLayout {
-  const innerMaxWidth = Math.max(maxWidth - padding * 2, 1);
-  const innerMaxHeight = Math.max(maxHeight - padding * 2, 1);
+  const widthCoeff = FILE_GAPS + 2 * PIECE_RADIUS_RATIO;
+  const heightCoeff = RANK_GAPS + 2 * PIECE_RADIUS_RATIO;
+  const fixedEdge = 2 * (SELECTION_RING_EXTRA + EDGE_BUFFER);
 
-  let cellWidth = innerMaxWidth / FILE_GAPS;
-  let cellHeight = innerMaxHeight / RANK_GAPS;
+  const cellSize = Math.min(
+    (Math.max(maxWidth - fixedEdge, 1)) / widthCoeff,
+    (Math.max(maxHeight - fixedEdge, 1)) / heightCoeff,
+  );
 
-  const cellSize = Math.min(cellWidth, cellHeight);
-  cellWidth = cellSize;
-  cellHeight = cellSize;
-
-  const width = cellWidth * FILE_GAPS + padding * 2;
-  const height = cellHeight * RANK_GAPS + padding * 2;
+  const padding = edgePaddingForCellSize(cellSize);
+  const pieceRadius = cellSize * PIECE_RADIUS_RATIO;
 
   return {
-    width,
-    height,
+    width: cellSize * FILE_GAPS + padding * 2,
+    height: cellSize * RANK_GAPS + padding * 2,
     padding,
-    cellWidth,
-    cellHeight,
-    pieceRadius: cellSize * 0.38,
+    cellWidth: cellSize,
+    cellHeight: cellSize,
+    pieceRadius,
   };
 }
 
