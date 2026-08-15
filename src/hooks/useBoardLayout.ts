@@ -5,6 +5,7 @@ import { createBoardLayout } from '../utils/coordinates';
 
 const HORIZONTAL_MARGIN = 16;
 const FOOTER_HEIGHT = 120;
+const CAPTURED_TRAY_HEIGHT = 44;
 
 export function useBoardLayout() {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -13,7 +14,7 @@ export function useBoardLayout() {
   const layout = useMemo(() => {
     const availableWidth = screenWidth - HORIZONTAL_MARGIN * 2;
     const availableHeight =
-      screenHeight - insets.top - insets.bottom - FOOTER_HEIGHT;
+      screenHeight - insets.top - insets.bottom - FOOTER_HEIGHT - CAPTURED_TRAY_HEIGHT * 2;
 
     return createBoardLayout(availableWidth, availableHeight);
   }, [insets.bottom, insets.top, screenHeight, screenWidth]);

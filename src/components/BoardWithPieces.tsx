@@ -1,12 +1,13 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg from 'react-native-svg';
-import type { BoardState, Piece, Position } from '../types/janggi';
+import type { BoardState, LastMove, Piece, Position } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
 import { getTouchTargetStyle } from '../utils/coordinates';
 import { getPieceAt } from '../game/boardUtils';
 import { BoardContent } from './Board';
+import { LastMoveFromMarker } from './LastMoveMarker';
 import { MoveIndicator } from './MoveIndicator';
-import { PieceView } from './Piece';
+import { AnimatedPieceView } from './AnimatedPieceView';
 
 interface BoardWithPiecesProps {
   board: BoardState;
@@ -15,6 +16,8 @@ interface BoardWithPiecesProps {
   onMovePress?: (position: Position) => void;
   selectedPieceId?: string | null;
   legalMoves?: Position[];
+  lastMove?: LastMove;
+  emphasizeLastMove?: boolean;
 }
 
 export function BoardWithPieces({
@@ -24,19 +27,18 @@ export function BoardWithPieces({
   onMovePress,
   selectedPieceId,
   legalMoves = [],
+  lastMove,
+  emphasizeLastMove = false,
 }: BoardWithPiecesProps) {
+  const showLastMove = emphasizeLastMove && lastMove !== undefined;
+
   return (
     <View style={[styles.container, { width: layout.width, height: layout.height }]}>
       <Svg width={layout.width} height={layout.height}>
         <BoardContent layout={layout} />
-        {board.pieces.map((piece) => (
-          <PieceView
-            key={piece.id}
-            piece={piece}
-            layout={layout}
-            selected={piece.id === selectedPieceId}
-          />
-        ))}
+        {showLastMove ? (
+          <LastMoveFromMarker position={lastMove.from} layout={layout} />
+        ) : null}
         {legalMoves.map((position) => {
           const occupant = getPieceAt(board.pieces, position);
           const key = `${position.file},${position.rank}`;
@@ -51,6 +53,16 @@ export function BoardWithPieces({
           );
         })}
       </Svg>
+
+      {board.pieces.map((piece) => (
+        <AnimatedPieceView
+          key={piece.id}
+          piece={piece}
+          layout={layout}
+          selected={piece.id === selectedPieceId}
+          lastMoved={showLastMove && piece.id === lastMove.pieceId}
+        />
+      ))}
 
       {board.pieces.map((piece) => (
         <Pressable
