@@ -43,7 +43,7 @@ function createSidePieces(side: Side, swapped: boolean): Piece[] {
   for (let file = 0; file < BACK_RANK_TYPES.length; file += 1) {
     const type = getBackRankType(file, swapped);
     pieces.push({
-      id: `${side}-${type}-${backRank}-${file}`,
+      id: `${side}-back-${backRank}-${file}`,
       side,
       type,
       position: { file, rank: backRank },
@@ -81,6 +81,7 @@ export function createInitialBoard(swaps: SwapState = { han: false, cho: false }
     turn: 'cho',
     swaps,
     moveCount: 0,
+    captured: { han: [], cho: [] },
   };
 }
 

@@ -11,6 +11,8 @@ export type PieceType =
 
 export type GamePhase = 'setup' | 'playing' | 'finished';
 
+export type GameMode = 'local' | 'vsAi';
+
 export interface Position {
   file: number;
   rank: number;
@@ -28,10 +30,34 @@ export interface SwapState {
   cho: boolean;
 }
 
+export interface CapturedPiece {
+  id: string;
+  side: Side;
+  type: PieceType;
+}
+
+export interface CapturedPieces {
+  /** Pieces captured by Han (Cho pieces). */
+  han: CapturedPiece[];
+  /** Pieces captured by Cho (Han pieces). */
+  cho: CapturedPiece[];
+}
+
+export interface LastMove {
+  pieceId: string;
+  pieceType: PieceType;
+  side: Side;
+  from: Position;
+  to: Position;
+}
+
 export interface BoardState {
   pieces: Piece[];
   phase: GamePhase;
   turn: Side;
   swaps: SwapState;
   moveCount: number;
+  captured: CapturedPieces;
+  lastMove?: LastMove;
+  winner?: Side;
 }

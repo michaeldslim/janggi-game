@@ -11,25 +11,51 @@ export function applyMove(
     return board;
   }
 
-  const capturedId = board.pieces.find(
+  const capturedPiece = board.pieces.find(
     (candidate) =>
       candidate.position.file === destination.file &&
       candidate.position.rank === destination.rank &&
       candidate.id !== piece.id,
-  )?.id;
+  );
 
   const pieces = board.pieces
-    .filter((candidate) => candidate.id !== capturedId)
+    .filter((candidate) => candidate.id !== capturedPiece?.id)
     .map((candidate) =>
       candidate.id === piece.id
         ? { ...candidate, position: destination }
         : candidate,
     );
 
+  const capturedGeneral = capturedPiece?.type === 'general';
+  const currentCaptured = board.captured ?? { han: [], cho: [] };
+  const captured = capturedPiece
+    ? {
+        ...currentCaptured,
+        [piece.side]: [
+          ...currentCaptured[piece.side],
+          {
+            id: capturedPiece.id,
+            side: capturedPiece.side,
+            type: capturedPiece.type,
+          },
+        ],
+      }
+    : currentCaptured;
+
   return {
     ...board,
     pieces,
-    turn: getOppositeSide(board.turn),
+    captured,
+    lastMove: {
+      pieceId: piece.id,
+      pieceType: piece.type,
+      side: piece.side,
+      from: { ...piece.position },
+      to: { ...destination },
+    },
+    turn: capturedGeneral ? board.turn : getOppositeSide(board.turn),
     moveCount: board.moveCount + 1,
+    phase: capturedGeneral ? 'finished' : board.phase,
+    winner: capturedGeneral ? piece.side : board.winner,
   };
 }
