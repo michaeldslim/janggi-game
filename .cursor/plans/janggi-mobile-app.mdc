@@ -1,0 +1,278 @@
+---
+name: Janggi Mobile App
+overview: React Native + Expo + TypeScript로 한국 장기 모바일 앱 구현. Phase 1은 보드 렌더링과 장기알 배치.
+todos:
+  - id: scaffold
+    content: Expo + TypeScript 프로젝트 스캐폴딩 및 기본 폴더 구조
+    status: completed
+  - id: types
+    content: 장기 도메인 타입 정의 (Piece, Side, Position, BoardState)
+    status: completed
+  - id: board-geometry
+    content: 9×10 교차점 보드 좌표계 및 궁성(3×3) 대각선 계산
+    status: completed
+  - id: board-ui
+    content: Board 컴포넌트 — 격자선, 궁성, 교차점 렌더링 (반응형)
+    status: completed
+  - id: piece-ui
+    content: Piece 컴포넌트 — 초/한 색상, 한자/약자 라벨, 터치 영역
+    status: completed
+  - id: initial-setup
+    content: 표준 초기 배치 상태 및 보드에 알 렌더링
+    status: completed
+  - id: horse-elephant-swap
+    content: 게임 시작 전 말·상 위치 교환 UI (선택 단계)
+    status: completed
+isProject: true
+---
+
+# Janggi Mobile App — Implementation Plan
+
+## Goals
+
+- **Platform**: React Native + Expo + TypeScript
+- **Release order**: Android first → iOS later (Expo eas build로 분리)
+- **Phase 1 (현재)**: 보드 + 장기알 렌더링, 표준 초기 배치
+- **Phase 2+**: 이동 규칙, 턴 관리, 체크/체크메이트, 한수쉼, 비장, AI/멀티플레이
+
+---
+
+## Tech Stack
+
+| Layer | Choice | Notes |
+|-------|--------|-------|
+| Framework | Expo SDK 52+ | `npx create-expo-app@latest` |
+| Language | TypeScript (strict) | `tsconfig` strict mode |
+| Rendering | React Native SVG (`react-native-svg`) | 궁성 대각선, 격자선에 적합 |
+| State (Phase 1) | React `useState` / `useMemo` | Phase 2에서 Zustand 또는 reducer로 확장 |
+| Navigation | Expo Router (tabs/stack) | 게임 화면 + 설정 |
+| Testing | Jest + `@testing-library/react-native` | 좌표/배치 로직 단위 테스트 |
+
+---
+
+## Board Geometry
+
+장기는 **9개 세로선 × 10개 가로선**의 **교차점**에서 놓고 움직인다. (서양 체스의 칸이 아님)
+
+```
+파일(file): 0 ─ 8  (왼쪽 → 오른쪽, 9줄)
+랭크(rank): 0 ─ 9  (위 → 아래, 10줄)
+```
+
+- **한(Han, Red)**: rank 0~2 쪽 (보드 상단)
+- **초(Cho, Blue)**: rank 7~9 쪽 (보드 하단)
+- **궁성(Palace)**: 각 진영 3×3 영역
+  - 한: files 3–5, ranks 0–2
+  - 초: files 3–5, ranks 7–9
+  - 궁성 내부 대각선: (3,0)↔(5,2), (5,0)↔(3,2) / (3,7)↔(5,9), (5,7)↔(3,9)
+
+### Screen Coordinates
+
+```ts
+// intersection (file, rank) → pixel (x, y)
+x = padding + file * cellWidth
+y = padding + rank * cellHeight
+```
+
+- `cellWidth = (boardWidth - 2*padding) / 8`  // 9 lines → 8 gaps
+- `cellHeight = (boardHeight - 2*padding) / 9` // 10 lines → 9 gaps
+- 터치 히트 영역: 교차점 중심 원형 (반경 ≈ min(cellWidth, cellHeight) * 0.35)
+
+---
+
+## Piece Model
+
+### Sides
+
+| Side | Korean | Color | Moves first |
+|------|--------|-------|-------------|
+| `cho` | 초 (靑) | Blue | Yes |
+| `han` | 한 (漢) | Red | No (1.5 deom compensation in scoring) |
+
+### Piece Types
+
+| Type | Korean | Count per side | Phase 1 |
+|------|--------|----------------|---------|
+| `general` | 장/將 | 1 | Render + place |
+| `guard` | 사/士 | 2 | Render + place |
+| `chariot` | 차/車 | 2 | Render + place |
+| `cannon` | 포/包 | 2 | Render + place |
+| `horse` | 마/馬 | 2 | Render + place |
+| `elephant` | 상/象 | 2 | Render + place |
+| `soldier` | 졸/卒 | 5 | Render + place |
+
+### Standard Initial Placement
+
+```
+Rank 0: 車 馬 象 士 將 士 象 馬 車   (Han)
+Rank 1:  ·  包  ·  ·  ·  ·  ·  包  ·
+Rank 2:  卒  ·  卒  ·  卒  ·  卒  ·  卒
+...
+Rank 7:  卒  ·  卒  ·  卒  ·  卒  ·  卒   (Cho)
+Rank 8:  ·  包  ·  ·  ·  ·  ·  包  ·
+Rank 9:  車 馬 象 士 將 士 象 馬 車
+```
+
+- Cho 쪽 한자: 車馬象士將士象馬車 / 包 / 卒
+- Han 쪽 한자: 동일 기물, 색상만 Red
+
+### Pre-game Swap (Phase 1.5)
+
+양 진영은 게임 시작 전 **바깥쪽 말(Horse)과 상(Elephant) 위치를 서로 바꿀 수 있음**.
+
+- Swap 대상: file 1 ↔ file 2, file 6 ↔ file 7 (양쪽 rank 0 / rank 9)
+- UI: 배치 화면에서 해당 알 탭 → swap 토글
+
+---
+
+## Project Structure
+
+```
+janggi-game/
+├── app/
+│   ├── _layout.tsx          # Expo Router root
+│   └── index.tsx            # Game screen
+├── src/
+│   ├── components/
+│   │   ├── Board.tsx        # SVG board + intersection grid
+│   │   ├── Palace.tsx       # Palace diagonal lines
+│   │   ├── Piece.tsx        # Single piece disc + label
+│   │   └── BoardWithPieces.tsx
+│   ├── constants/
+│   │   ├── board.ts         # FILES=9, RANKS=10, palace bounds
+│   │   ├── colors.ts        # cho blue, han red, board wood tone
+│   │   └── pieces.ts        # Labels, standard setup
+│   ├── types/
+│   │   └── janggi.ts        # Side, PieceType, Position, Piece, BoardState
+│   ├── utils/
+│   │   ├── coordinates.ts   # file/rank ↔ pixel
+│   │   └── setup.ts         # createInitialBoard(), applyHorseElephantSwap()
+│   └── hooks/
+│       └── useBoardLayout.ts
+├── assets/
+│   └── fonts/               # Optional: Korean calligraphy font later
+├── app.json
+├── package.json
+└── tsconfig.json
+```
+
+---
+
+## Phase 1 Tasks (Detail)
+
+### 1. Scaffold
+
+```bash
+npx create-expo-app@latest . --template blank-typescript
+npx expo install react-native-svg
+npx expo install expo-router react-native-safe-area-context react-native-screens
+```
+
+- `app.json`: `orientation: "portrait"`, Android `package` 설정
+- ESLint + Prettier (Expo 기본 설정 유지)
+
+### 2. Types (`src/types/janggi.ts`)
+
+```ts
+type Side = 'cho' | 'han';
+type PieceType = 'general' | 'guard' | 'chariot' | 'cannon' | 'horse' | 'elephant' | 'soldier';
+
+interface Position { file: number; rank: number; }  // 0-indexed
+
+interface Piece {
+  id: string;
+  side: Side;
+  type: PieceType;
+  position: Position;
+}
+
+interface BoardState {
+  pieces: Piece[];
+  phase: 'setup' | 'playing' | 'finished';
+  turn: Side;
+}
+```
+
+### 3. Board UI
+
+- 배경: 나무 톤 (`#C4A574` 계열) 또는 이미지 에셋
+- `react-native-svg`:
+  - 세로 9줄, 가로 10줄 (`<Line>`)
+  - 궁성 사각형 테두리 + X자 대각선 2개 (양 끝)
+- 교차점에 작은 원형 마커 (선택 시 하이라이트용, Phase 1에서는 비활성 가능)
+
+### 4. Piece UI
+
+- 원형 디스크 (Cho: `#2563EB`, Han: `#DC2626`)
+- 중앙 한자 라벨 (車, 馬, 象, 士, 將, 包, 卒)
+- `fontSize`는 `cellSize`에 비례
+- `Pressable` 또는 SVG `onPress` on piece group
+
+### 5. Layout
+
+- `useWindowDimensions`로 가로 폭 기준 보드 크기 계산
+- Safe area insets 적용
+- 세로 화면: 보드 상단, 하단에 진영/턴 표시 placeholder
+
+---
+
+## Phase 2+ Roadmap (참고)
+
+| Phase | Scope |
+|-------|-------|
+| 2 | 이동 규칙 엔진 (말/상 막힘, 포 점프, 궁성 대각선) |
+| 3 | 턴, 합법 수 생성, 체크/체크메이트, 한수쉼 |
+| 4 | 비장(bikjang) 판정, 점수(듬) |
+| 5 | 로컬 2인 / AI / 온라인 |
+| 6 | iOS 빌드 (EAS), 스토어 배포 |
+
+### Movement Rules (구현 시 참고)
+
+- **장(General)**: 궁성 내 직선·대각 1칸
+- **사(Guard)**: 궁성 내 직선·대각 1칸
+- **차(Chariot)**: 직선 무제한 (빈 교차점만)
+- **포(Cannon)**: 정확히 1기물 뛰어넘어 이동/포획; 다른 포는 뛰어넘기/포획 불가; 첫 턴에는 뛰어넘을 기물 없으면 이동 불가
+- **마(Horse)**: 직선 1 + 대각 1; 인접 직선점 막히면 이동 불가
+- **상(Elephant)**: 직선 1 + 대각 2; 경로 중간점 막히면 이동 불가
+- **졸(Soldier)**: 앞·옆 1칸 (뒤로 불가); 상대 궁성 내에서는 앞 대각 포함; 최전선(rank 9 for Cho / rank 0 for Han) 도달 후 옆으로만
+
+### Special Rules (구현 시 참고)
+
+- **한수쉼**: 장이 체크 상태가 아니면 패스 가능
+- **비장**: 양 장이 같은 파일에서 사이에 기물 없이 마주보면, 이동 측이 깨지 않으면 무승부 선언
+
+---
+
+## Visual Reference
+
+```
+        file
+      0 1 2 3 4 5 6 7 8
+    0 ┼─┼─┼─┼─┼─┼─┼─┼─┼  Han back rank
+      │ │ │╲│╱│╲│╱│ │ │
+    2 ┼─┼─┼─┼─┼─┼─┼─┼─┼  Han soldiers
+      │ │ │ │ │ │ │ │ │
+      · · · · · · · · ·   (middle ranks 3–6)
+      │ │ │ │ │ │ │ │ │
+    7 ┼─┼─┼─┼─┼─┼─┼─┼─┼  Cho soldiers
+      │ │ │╲│╱│╲│╱│ │ │
+    9 ┼─┼─┼─┼─┼─┼─┼─┼─┼  Cho back rank
+   rank
+```
+
+---
+
+## Acceptance Criteria — Phase 1
+
+- [ ] Expo 앱이 Android 에뮬레이터/기기에서 실행됨
+- [ ] 9×10 교차점 보드가 화면 비율에 맞게 표시됨
+- [ ] 양쪽 궁성과 대각선이 정확히 그려짐
+- [ ] 초(Blue)·한(Red) 16기씩 총 32개 알이 표준 위치에 표시됨
+- [ ] 각 알에 올바른 한자 라벨과 색상이 적용됨
+- [ ] (선택) 말·상 위치 교환 UI 동작
+
+---
+
+## Next Step After Plan
+
+Plan 승인 후 Agent가 **scaffold → types → Board → Piece → initial setup** 순으로 구현을 시작한다.
