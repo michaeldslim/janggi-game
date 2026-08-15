@@ -61,3 +61,27 @@ export function positionsEqual(
 ): boolean {
   return a.file === b.file && a.rank === b.rank;
 }
+
+const MIN_TOUCH_TARGET = 48;
+
+export function getTouchTargetSize(layout: BoardLayout): number {
+  const cellSize = Math.min(layout.cellWidth, layout.cellHeight);
+  return Math.max(MIN_TOUCH_TARGET, cellSize * 0.92);
+}
+
+export function getTouchTargetStyle(
+  file: number,
+  rank: number,
+  layout: BoardLayout,
+) {
+  const { x, y } = intersectionToPixel(file, rank, layout);
+  const size = getTouchTargetSize(layout);
+
+  return {
+    position: 'absolute' as const,
+    left: x - size / 2,
+    top: y - size / 2,
+    width: size,
+    height: size,
+  };
+}

@@ -1,11 +1,15 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BoardWithPieces } from '../src/components/BoardWithPieces';
 import { colors } from '../src/constants/colors';
 import { SIDE_LABELS } from '../src/constants/pieces';
+import { applyMove } from '../src/game/applyMove';
+import { getLegalMovesForPiece } from '../src/game/moves';
 import { useBoardLayout } from '../src/hooks/useBoardLayout';
-import type { BoardState, Piece } from '../src/types/janggi';
+import { useMoveSound } from '../src/hooks/useMoveSound';
+import type { BoardState, Piece, Position } from '../src/types/janggi';
+import { positionsEqual } from '../src/utils/coordinates';
 import {
   createInitialBoard,
   isSwappablePiece,
@@ -15,20 +19,72 @@ import {
 
 export default function GameScreen() {
   const layout = useBoardLayout();
+  const playMoveSound = useMoveSound();
   const [board, setBoard] = useState<BoardState>(() => createInitialBoard());
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
 
+  const selectedPiece = useMemo(
+    () => board.pieces.find((piece) => piece.id === selectedPieceId) ?? null,
+    [board.pieces, selectedPieceId],
+  );
+
+  const legalMoves = useMemo(() => {
+    if (!selectedPiece) {
+      return [];
+    }
+
+    return getLegalMovesForPiece(board, selectedPiece);
+  }, [board, selectedPiece]);
+
   const handlePiecePress = useCallback(
     (piece: Piece) => {
-      if (board.phase !== 'setup' || !isSwappablePiece(piece)) {
+      if (board.phase === 'setup') {
+        if (!isSwappablePiece(piece)) {
+          return;
+        }
+
+        const nextSwaps = toggleSideSwap(board.swaps, piece.side);
+        setBoard((current) => rebuildBoardFromSwaps(current, nextSwaps));
+        setSelectedPieceId(piece.id);
         return;
       }
 
-      const nextSwaps = toggleSideSwap(board.swaps, piece.side);
-      setBoard((current) => rebuildBoardFromSwaps(current, nextSwaps));
+      if (board.phase !== 'playing' || piece.side !== board.turn) {
+        return;
+      }
+
+      if (selectedPieceId === piece.id) {
+        setSelectedPieceId(null);
+        return;
+      }
+
+      const destinationMove = legalMoves.find((move) =>
+        positionsEqual(move, piece.position),
+      );
+
+      if (selectedPiece && destinationMove) {
+        setBoard((current) => applyMove(current, selectedPiece, piece.position));
+        setSelectedPieceId(null);
+        playMoveSound();
+        return;
+      }
+
       setSelectedPieceId(piece.id);
     },
-    [board.phase, board.swaps],
+    [board.phase, board.swaps, board.turn, legalMoves, playMoveSound, selectedPiece, selectedPieceId],
+  );
+
+  const handleMovePress = useCallback(
+    (destination: Position) => {
+      if (!selectedPiece) {
+        return;
+      }
+
+      setBoard((current) => applyMove(current, selectedPiece, destination));
+      setSelectedPieceId(null);
+      playMoveSound();
+    },
+    [playMoveSound, selectedPiece],
   );
 
   const handleStartGame = useCallback(() => {
@@ -42,7 +98,9 @@ export default function GameScreen() {
   const phaseLabel =
     board.phase === 'setup'
       ? 'Tap a horse or elephant to swap positions, then start.'
-      : `${SIDE_LABELS[board.turn]} to move`;
+      : selectedPiece
+        ? `Select destination for ${SIDE_LABELS[selectedPiece.side]} ${selectedPiece.type}`
+        : `${SIDE_LABELS[board.turn]} to move`;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -56,7 +114,9 @@ export default function GameScreen() {
           board={board}
           layout={layout}
           onPiecePress={handlePiecePress}
+          onMovePress={handleMovePress}
           selectedPieceId={selectedPieceId}
+          legalMoves={legalMoves}
         />
       </View>
 
@@ -72,15 +132,17 @@ export default function GameScreen() {
               Cho swap: {board.swaps.cho ? '象馬' : '馬象'}
             </Text>
           </View>
-        ) : null}
+        ) : (
+          <Text style={styles.turnText}>
+            Move {board.moveCount + 1} · {SIDE_LABELS[board.turn]}
+          </Text>
+        )}
 
         {board.phase === 'setup' ? (
           <Pressable style={styles.button} onPress={handleStartGame}>
             <Text style={styles.buttonText}>Start Game</Text>
           </Pressable>
-        ) : (
-          <Text style={styles.turnText}>{SIDE_LABELS[board.turn]} moves first</Text>
-        )}
+        ) : null}
       </View>
     </SafeAreaView>
   );
