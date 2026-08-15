@@ -33,4 +33,5 @@ export interface BoardState {
   phase: GamePhase;
   turn: Side;
   swaps: SwapState;
+  moveCount: number;
 }

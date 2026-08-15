@@ -80,6 +80,7 @@ export function createInitialBoard(swaps: SwapState = { han: false, cho: false }
     phase: 'setup',
     turn: 'cho',
     swaps,
+    moveCount: 0,
   };
 }
 
