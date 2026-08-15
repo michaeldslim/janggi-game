@@ -1,4 +1,4 @@
-import Svg, { Circle, G, Text as SvgText } from 'react-native-svg';
+import { Circle, G, Text as SvgText } from 'react-native-svg';
 import { PIECE_LABELS } from '../constants/pieces';
 import { colors } from '../constants/colors';
 import type { Piece } from '../types/janggi';
@@ -9,17 +9,15 @@ interface PieceViewProps {
   piece: Piece;
   layout: BoardLayout;
   selected?: boolean;
-  onPress?: (piece: Piece) => void;
 }
 
-export function PieceView({ piece, layout, selected = false, onPress }: PieceViewProps) {
+export function PieceView({ piece, layout, selected = false }: PieceViewProps) {
   const { x, y } = intersectionToPixel(piece.position.file, piece.position.rank, layout);
-  const fill = piece.side === 'cho' ? colors.choPiece : colors.hanPiece;
-  const stroke = piece.side === 'cho' ? colors.choPieceBorder : colors.hanPieceBorder;
+  const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
   const fontSize = layout.pieceRadius * 1.15;
 
   return (
-    <G onPress={onPress ? () => onPress(piece) : undefined}>
+    <G>
       {selected ? (
         <Circle
           cx={x}
@@ -34,14 +32,14 @@ export function PieceView({ piece, layout, selected = false, onPress }: PieceVie
         cx={x}
         cy={y}
         r={layout.pieceRadius}
-        fill={fill}
-        stroke={stroke}
-        strokeWidth={2}
+        fill={colors.pieceBackground}
+        stroke={colors.pieceBorder}
+        strokeWidth={1.5}
       />
       <SvgText
         x={x}
         y={y + fontSize * 0.35}
-        fill={colors.pieceText}
+        fill={textColor}
         fontSize={fontSize}
         fontWeight="700"
         textAnchor="middle"
