@@ -1,0 +1,16 @@
+export const colors = {
+  background: '#1A1208',
+  boardWood: '#C4A574',
+  boardBorder: '#5C3D1E',
+  gridLine: '#3D2914',
+  palaceLine: '#2A1A0C',
+  choPiece: '#2563EB',
+  choPieceBorder: '#1D4ED8',
+  hanPiece: '#DC2626',
+  hanPieceBorder: '#B91C1C',
+  pieceText: '#FFF8E7',
+  textPrimary: '#FFF8E7',
+  textMuted: '#A89070',
+  button: '#5C3D1E',
+  buttonText: '#FFF8E7',
+} as const;
