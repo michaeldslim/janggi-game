@@ -1,14 +1,25 @@
 import type { PieceType, Side } from '../types/janggi';
 
-export const PIECE_LABELS: Record<PieceType, string> = {
+/** Shared labels for pieces that are identical on both sides. */
+export const PIECE_LABELS: Record<Exclude<PieceType, 'general' | 'soldier'>, string> = {
   chariot: '車',
   horse: '馬',
   elephant: '象',
   guard: '士',
-  general: '將',
   cannon: '包',
-  soldier: '卒',
 };
+
+export function getPieceHanja(piece: { side: Side; type: PieceType }): string {
+  if (piece.type === 'general') {
+    return piece.side === 'cho' ? '楚' : '漢';
+  }
+
+  if (piece.type === 'soldier') {
+    return piece.side === 'cho' ? '卒' : '兵';
+  }
+
+  return PIECE_LABELS[piece.type];
+}
 
 export const SIDE_LABELS: Record<Side, string> = {
   cho: '楚 (Cho)',

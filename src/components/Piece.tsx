@@ -1,5 +1,5 @@
 import { Circle, G, Text as SvgText } from 'react-native-svg';
-import { PIECE_LABELS } from '../constants/pieces';
+import { getPieceHanja } from '../constants/pieces';
 import { colors } from '../constants/colors';
 import type { Piece } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
@@ -9,15 +9,26 @@ interface PieceViewProps {
   piece: Piece;
   layout: BoardLayout;
   selected?: boolean;
+  lastMoved?: boolean;
 }
 
-export function PieceView({ piece, layout, selected = false }: PieceViewProps) {
+export function PieceView({ piece, layout, selected = false, lastMoved = false }: PieceViewProps) {
   const { x, y } = intersectionToPixel(piece.position.file, piece.position.rank, layout);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
   const fontSize = layout.pieceRadius * 1.15;
 
   return (
     <G>
+      {lastMoved ? (
+        <Circle
+          cx={x}
+          cy={y}
+          r={layout.pieceRadius + 5}
+          fill="none"
+          stroke={colors.lastMoveRing}
+          strokeWidth={3}
+        />
+      ) : null}
       {selected ? (
         <Circle
           cx={x}
@@ -44,7 +55,7 @@ export function PieceView({ piece, layout, selected = false }: PieceViewProps) {
         fontWeight="700"
         textAnchor="middle"
       >
-        {PIECE_LABELS[piece.type]}
+        {getPieceHanja(piece)}
       </SvgText>
     </G>
   );
