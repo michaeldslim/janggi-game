@@ -17,4 +17,6 @@ export const colors = {
   lastMoveFrom: 'rgba(245, 158, 11, 0.3)',
   lastMoveRing: '#F59E0B',
   checkRing: '#EF4444',
+  meonggunFill: '#1D4ED8',
+  meonggunStroke: '#93C5FD',
 } as const;

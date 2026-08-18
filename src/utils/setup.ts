@@ -12,28 +12,46 @@ import {
   HAN_SOLDIER_RANK,
   SWAP_FILE_PAIRS,
 } from '../constants/board';
-import type { BoardState, Piece, PieceType, Side, SwapState } from '../types/janggi';
+import type {
+  BoardState,
+  Piece,
+  PieceType,
+  Side,
+  SideSwapState,
+  SwapState,
+  SwapWing,
+} from '../types/janggi';
+import { DEFAULT_SWAP_STATE } from '../types/janggi';
 
-function getBackRankType(file: number, swapped: boolean): PieceType {
+function getWingForFile(file: number): SwapWing | null {
+  if (file === SWAP_FILE_PAIRS[0][0] || file === SWAP_FILE_PAIRS[0][1]) {
+    return 'left';
+  }
+
+  if (file === SWAP_FILE_PAIRS[1][0] || file === SWAP_FILE_PAIRS[1][1]) {
+    return 'right';
+  }
+
+  return null;
+}
+
+function getBackRankType(file: number, sideSwaps: SideSwapState): PieceType {
   const baseType = BACK_RANK_TYPES[file];
+  const wing = getWingForFile(file);
 
-  if (!swapped) {
+  if (!wing) {
     return baseType;
   }
 
-  for (const [horseFile, elephantFile] of SWAP_FILE_PAIRS) {
-    if (file === horseFile) {
-      return 'elephant';
-    }
-    if (file === elephantFile) {
-      return 'horse';
-    }
+  if (!sideSwaps[wing]) {
+    return baseType;
   }
 
-  return baseType;
+  const [fileA, fileB] = SWAP_FILE_PAIRS[wing === 'left' ? 0 : 1];
+  return file === fileA ? BACK_RANK_TYPES[fileB] : BACK_RANK_TYPES[fileA];
 }
 
-function createSidePieces(side: Side, swapped: boolean): Piece[] {
+function createSidePieces(side: Side, sideSwaps: SideSwapState): Piece[] {
   const isHan = side === 'han';
   const backRank = isHan ? HAN_BACK_RANK : CHO_BACK_RANK;
   const cannonRank = isHan ? HAN_CANNON_RANK : CHO_CANNON_RANK;
@@ -41,7 +59,7 @@ function createSidePieces(side: Side, swapped: boolean): Piece[] {
   const pieces: Piece[] = [];
 
   for (let file = 0; file < BACK_RANK_TYPES.length; file += 1) {
-    const type = getBackRankType(file, swapped);
+    const type = getBackRankType(file, sideSwaps);
     pieces.push({
       id: `${side}-back-${backRank}-${file}`,
       side,
@@ -71,7 +89,7 @@ function createSidePieces(side: Side, swapped: boolean): Piece[] {
   return pieces;
 }
 
-export function createInitialBoard(swaps: SwapState = { han: false, cho: false }): BoardState {
+export function createInitialBoard(swaps: SwapState = DEFAULT_SWAP_STATE): BoardState {
   return {
     pieces: [
       ...createSidePieces('han', swaps.han),
@@ -85,19 +103,32 @@ export function createInitialBoard(swaps: SwapState = { han: false, cho: false }
   };
 }
 
-export function toggleSideSwap(swaps: SwapState, side: Side): SwapState {
+export function getSwapWingForPiece(piece: Piece): SwapWing | null {
+  const backRank = piece.side === 'han' ? HAN_BACK_RANK : CHO_BACK_RANK;
+
+  if (piece.position.rank !== backRank) {
+    return null;
+  }
+
+  return getWingForFile(piece.position.file);
+}
+
+export function toggleWingSwap(
+  swaps: SwapState,
+  side: Side,
+  wing: SwapWing,
+): SwapState {
   return {
     ...swaps,
-    [side]: !swaps[side],
+    [side]: {
+      ...swaps[side],
+      [wing]: !swaps[side][wing],
+    },
   };
 }
 
 export function isSwappablePiece(piece: Piece): boolean {
-  const backRank = piece.side === 'han' ? HAN_BACK_RANK : CHO_BACK_RANK;
-  return (
-    piece.position.rank === backRank &&
-    (piece.type === 'horse' || piece.type === 'elephant')
-  );
+  return getSwapWingForPiece(piece) !== null;
 }
 
 export function rebuildBoardFromSwaps(

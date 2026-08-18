@@ -4,6 +4,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BoardWithPieces } from '../src/components/BoardWithPieces';
 import { CapturedPiecesTray } from '../src/components/CapturedPiecesTray';
+import { CheckMessageOverlay } from '../src/components/CheckMessageOverlay';
+import { MeonggunMessageOverlay } from '../src/components/MeonggunMessageOverlay';
 import { ScoreDisplay } from '../src/components/ScoreDisplay';
 import { SettingsIcon } from '../src/components/SettingsIcon';
 import { colors } from '../src/constants/colors';
@@ -17,13 +19,14 @@ import { useBoardLayout } from '../src/hooks/useBoardLayout';
 import { useMoveSound } from '../src/hooks/useMoveSound';
 import { useI18n } from '../src/i18n/I18nProvider';
 import { useGameSettings } from '../src/settings/GameSettingsProvider';
-import type { BoardState, GameMode, Piece, Position, Side } from '../src/types/janggi';
+import type { BoardState, Piece, Position, Side } from '../src/types/janggi';
 import { positionsEqual } from '../src/utils/coordinates';
 import {
   createInitialBoard,
+  getSwapWingForPiece,
   isSwappablePiece,
   rebuildBoardFromSwaps,
-  toggleSideSwap,
+  toggleWingSwap,
 } from '../src/utils/setup';
 
 const AI_THINK_DELAY_MS = 550;
@@ -31,14 +34,19 @@ const AI_THINK_DELAY_MS = 550;
 export default function GameScreen() {
   const router = useRouter();
   const { t, sideLabel, pieceLabel } = useI18n();
-  const { userSideVsAi, player1SideLocal, aiDifficulty } = useGameSettings();
+  const { gameMode, userSideVsAi, player1SideLocal, aiDifficulty } = useGameSettings();
   const layout = useBoardLayout();
   const playMoveSound = useMoveSound();
-  const [gameMode, setGameMode] = useState<GameMode>('vsAi');
   const [board, setBoard] = useState<BoardState>(() => createInitialBoard());
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
   const [isAiThinking, setIsAiThinking] = useState(false);
+  const [checkMessageKey, setCheckMessageKey] = useState(0);
+  const [meonggunMessageKey, setMeonggunMessageKey] = useState(0);
   const boardRef = useRef(board);
+  const previousBoardRef = useRef(board);
+  const lastProcessedCheckMove = useRef(0);
+  const lastProcessedMeonggunMove = useRef(0);
+  const previousGameModeRef = useRef(gameMode);
 
   const userSide: Side = gameMode === 'vsAi' ? userSideVsAi : player1SideLocal;
   const aiSide: Side = getOppositeSide(userSide);
@@ -47,6 +55,17 @@ export default function GameScreen() {
   useEffect(() => {
     boardRef.current = board;
   }, [board]);
+
+  useEffect(() => {
+    if (previousGameModeRef.current === gameMode) {
+      return;
+    }
+
+    previousGameModeRef.current = gameMode;
+    setBoard(createInitialBoard());
+    setSelectedPieceId(null);
+    setIsAiThinking(false);
+  }, [gameMode]);
 
   const selectedPiece = useMemo(
     () => board.pieces.find((piece) => piece.id === selectedPieceId) ?? null,
@@ -73,6 +92,43 @@ export default function GameScreen() {
     return isInCheck(board, board.turn) ? board.turn : null;
   }, [board]);
 
+  useEffect(() => {
+    if (board.phase !== 'playing' || board.moveCount === 0) {
+      lastProcessedCheckMove.current = 0;
+      return;
+    }
+
+    if (!inCheckSide || board.moveCount <= lastProcessedCheckMove.current) {
+      return;
+    }
+
+    lastProcessedCheckMove.current = board.moveCount;
+    setCheckMessageKey((key) => key + 1);
+  }, [board.moveCount, board.phase, inCheckSide]);
+
+  useEffect(() => {
+    const previous = previousBoardRef.current;
+    previousBoardRef.current = board;
+
+    if (board.moveCount === 0) {
+      lastProcessedMeonggunMove.current = 0;
+      return;
+    }
+
+    if (board.moveCount <= previous.moveCount || previous.phase !== 'playing') {
+      return;
+    }
+
+    const mover = previous.turn;
+    if (
+      isInCheck(previous, mover) &&
+      board.moveCount > lastProcessedMeonggunMove.current
+    ) {
+      lastProcessedMeonggunMove.current = board.moveCount;
+      setMeonggunMessageKey((key) => key + 1);
+    }
+  }, [board]);
+
   const canPassTurn = useMemo(() => {
     return board.phase === 'playing' && isUserTurn && inCheckSide === null;
   }, [board.phase, inCheckSide, isUserTurn]);
@@ -88,7 +144,12 @@ export default function GameScreen() {
           return;
         }
 
-        const nextSwaps = toggleSideSwap(board.swaps, piece.side);
+        const wing = getSwapWingForPiece(piece);
+        if (!wing) {
+          return;
+        }
+
+        const nextSwaps = toggleWingSwap(board.swaps, piece.side, wing);
         setBoard((current) => rebuildBoardFromSwaps(current, nextSwaps));
         setSelectedPieceId(piece.id);
         return;
@@ -167,13 +228,6 @@ export default function GameScreen() {
     setBoard((current) => passTurn(current));
     setSelectedPieceId(null);
   }, [canPassTurn]);
-
-  const handleModeChange = useCallback((mode: GameMode) => {
-    setGameMode(mode);
-    setBoard(createInitialBoard());
-    setSelectedPieceId(null);
-    setIsAiThinking(false);
-  }, []);
 
   useEffect(() => {
     if (
@@ -282,10 +336,6 @@ export default function GameScreen() {
       return t('game.aiThinking');
     }
 
-    if (inCheckSide) {
-      return t('game.check');
-    }
-
     if (emphasizeLastMove && board.lastMove) {
       const mover =
         gameMode === 'vsAi'
@@ -327,7 +377,6 @@ export default function GameScreen() {
     board.winner,
     emphasizeLastMove,
     gameMode,
-    inCheckSide,
     isAiThinking,
     pieceLabel,
     player1Side,
@@ -379,6 +428,20 @@ export default function GameScreen() {
             inCheckSide={inCheckSide}
           />
 
+          <CheckMessageOverlay
+            triggerKey={checkMessageKey}
+            message={t('game.checkBanner')}
+            boardWidth={layout.width}
+            boardHeight={layout.height}
+          />
+
+          <MeonggunMessageOverlay
+            triggerKey={meonggunMessageKey}
+            message={t('game.meonggunBanner')}
+            boardWidth={layout.width}
+            boardHeight={layout.height}
+          />
+
           {board.phase !== 'setup' ? (
             <CapturedPiecesTray
               pieces={board.captured.cho}
@@ -391,37 +454,6 @@ export default function GameScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.phaseText}>{phaseLabel}</Text>
-
-        {board.phase === 'setup' ? (
-          <View style={styles.modeRow}>
-            <Pressable
-              style={[styles.modeButton, gameMode === 'vsAi' && styles.modeButtonActive]}
-              onPress={() => handleModeChange('vsAi')}
-            >
-              <Text
-                style={[
-                  styles.modeButtonText,
-                  gameMode === 'vsAi' && styles.modeButtonTextActive,
-                ]}
-              >
-                {t('game.vsAi')}
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.modeButton, gameMode === 'local' && styles.modeButtonActive]}
-              onPress={() => handleModeChange('local')}
-            >
-              <Text
-                style={[
-                  styles.modeButtonText,
-                  gameMode === 'local' && styles.modeButtonTextActive,
-                ]}
-              >
-                {t('game.twoPlayers')}
-              </Text>
-            </Pressable>
-          </View>
-        ) : null}
 
         {board.phase === 'setup' ? null : (
           <Text style={styles.turnText}>
@@ -498,6 +530,7 @@ const styles = StyleSheet.create({
   gameArea: {
     alignItems: 'stretch',
     justifyContent: 'center',
+    position: 'relative',
   },
   footer: {
     paddingHorizontal: 20,
@@ -508,30 +541,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
-  },
-  modeRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  modeButton: {
-    flex: 1,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.textMuted,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  modeButtonActive: {
-    backgroundColor: colors.button,
-    borderColor: colors.button,
-  },
-  modeButtonText: {
-    color: colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  modeButtonTextActive: {
-    color: colors.buttonText,
   },
   button: {
     backgroundColor: colors.button,

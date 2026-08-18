@@ -1,4 +1,5 @@
 import type { BoardState, Piece, Position, Side } from '../types/janggi';
+import { DEFAULT_SWAP_STATE } from '../types/janggi';
 import { positionsEqual } from '../utils/coordinates';
 import { findGeneral, getOppositeSide, getPieceAt } from './boardUtils';
 import { wouldCreateBikjang } from './bikjang';
@@ -13,7 +14,7 @@ export function isSquareAttackedBy(
     pieces,
     phase: 'playing',
     turn: attackerSide,
-    swaps: { han: false, cho: false },
+    swaps: DEFAULT_SWAP_STATE,
     moveCount: 0,
     captured: { han: [], cho: [] },
   };

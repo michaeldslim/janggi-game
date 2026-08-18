@@ -7,15 +7,17 @@ import { colors } from '../src/constants/colors';
 import { useI18n } from '../src/i18n/I18nProvider';
 import type { Locale } from '../src/i18n';
 import { useGameSettings } from '../src/settings/GameSettingsProvider';
-import type { AiDifficulty, Side } from '../src/types/janggi';
+import type { AiDifficulty, GameMode, Side } from '../src/types/janggi';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { locale, setLocale, t, sideLabel } = useI18n();
   const {
+    gameMode,
     userSideVsAi,
     player1SideLocal,
     aiDifficulty,
+    setGameMode,
     setUserSideVsAi,
     setPlayer1SideLocal,
     setAiDifficulty,
@@ -25,6 +27,14 @@ export default function SettingsScreen() {
     { value: 'en' as Locale, label: t('language.en') },
     { value: 'ko' as Locale, label: t('language.ko') },
   ];
+
+  const gameModeOptions = useMemo(
+    () => [
+      { value: 'vsAi' as GameMode, label: t('game.vsAi') },
+      { value: 'local' as GameMode, label: t('game.twoPlayers') },
+    ],
+    [t],
+  );
 
   const sideOptions = useMemo(
     () => [
@@ -61,34 +71,44 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.aiDifficulty')}</Text>
-          <Text style={styles.sectionDescription}>{t('settings.aiDifficultyDescription')}</Text>
-          <ChipGroup
-            options={difficultyOptions}
-            value={aiDifficulty}
-            onChange={setAiDifficulty}
-          />
+          <Text style={styles.sectionTitle}>{t('settings.gameMode')}</Text>
+          <Text style={styles.sectionDescription}>{t('settings.gameModeDescription')}</Text>
+          <ChipGroup options={gameModeOptions} value={gameMode} onChange={setGameMode} />
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.aiSide')}</Text>
-          <Text style={styles.sectionDescription}>{t('settings.aiSideDescription')}</Text>
-          <ChipGroup
-            options={sideOptions}
-            value={userSideVsAi}
-            onChange={setUserSideVsAi}
-          />
-        </View>
+        {gameMode === 'vsAi' ? (
+          <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('settings.aiDifficulty')}</Text>
+              <Text style={styles.sectionDescription}>{t('settings.aiDifficultyDescription')}</Text>
+              <ChipGroup
+                options={difficultyOptions}
+                value={aiDifficulty}
+                onChange={setAiDifficulty}
+              />
+            </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t('settings.player1Side')}</Text>
-          <Text style={styles.sectionDescription}>{t('settings.player1SideDescription')}</Text>
-          <ChipGroup
-            options={sideOptions}
-            value={player1SideLocal}
-            onChange={setPlayer1SideLocal}
-          />
-        </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('settings.aiSide')}</Text>
+              <Text style={styles.sectionDescription}>{t('settings.aiSideDescription')}</Text>
+              <ChipGroup
+                options={sideOptions}
+                value={userSideVsAi}
+                onChange={setUserSideVsAi}
+              />
+            </View>
+          </>
+        ) : (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('settings.player1Side')}</Text>
+            <Text style={styles.sectionDescription}>{t('settings.player1SideDescription')}</Text>
+            <ChipGroup
+              options={sideOptions}
+              value={player1SideLocal}
+              onChange={setPlayer1SideLocal}
+            />
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

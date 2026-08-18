@@ -29,10 +29,27 @@ export interface Piece {
   position: Position;
 }
 
-export interface SwapState {
-  han: boolean;
-  cho: boolean;
+export type SwapWing = 'left' | 'right';
+
+export interface SideSwapState {
+  left: boolean;
+  right: boolean;
 }
+
+export interface SwapState {
+  han: SideSwapState;
+  cho: SideSwapState;
+}
+
+export const DEFAULT_SIDE_SWAP_STATE: SideSwapState = {
+  left: false,
+  right: false,
+};
+
+export const DEFAULT_SWAP_STATE: SwapState = {
+  han: { ...DEFAULT_SIDE_SWAP_STATE },
+  cho: { ...DEFAULT_SIDE_SWAP_STATE },
+};
 
 export interface CapturedPiece {
   id: string;

@@ -8,6 +8,8 @@ export interface TranslationSchema {
     title: string;
     language: string;
     languageDescription: string;
+    gameMode: string;
+    gameModeDescription: string;
     aiSide: string;
     aiSideDescription: string;
     player1Side: string;
@@ -44,6 +46,8 @@ export interface TranslationSchema {
     youAreSide: string;
     ai: string;
     check: string;
+    checkBanner: string;
+    meonggunBanner: string;
     passTurn: string;
     checkmate: string;
     stalemate: string;

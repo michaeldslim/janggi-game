@@ -8,15 +8,17 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { AiDifficulty, Side } from '../types/janggi';
+import type { AiDifficulty, GameMode, Side } from '../types/janggi';
 
 export interface GameSettings {
+  gameMode: GameMode;
   userSideVsAi: Side;
   player1SideLocal: Side;
   aiDifficulty: AiDifficulty;
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
+  gameMode: 'vsAi',
   userSideVsAi: 'cho',
   player1SideLocal: 'cho',
   aiDifficulty: 'medium',
@@ -26,6 +28,7 @@ export const GAME_SETTINGS_STORAGE_KEY = '@janggi/game-settings';
 
 interface GameSettingsContextValue extends GameSettings {
   isReady: boolean;
+  setGameMode: (mode: GameMode) => void;
   setUserSideVsAi: (side: Side) => void;
   setPlayer1SideLocal: (side: Side) => void;
   setAiDifficulty: (difficulty: AiDifficulty) => void;
@@ -41,6 +44,10 @@ function parseAiDifficulty(value: unknown): AiDifficulty {
   return 'medium';
 }
 
+function parseGameMode(value: unknown): GameMode {
+  return value === 'local' ? 'local' : 'vsAi';
+}
+
 function parseStoredSettings(raw: string | null): GameSettings {
   if (!raw) {
     return DEFAULT_GAME_SETTINGS;
@@ -49,6 +56,7 @@ function parseStoredSettings(raw: string | null): GameSettings {
   try {
     const parsed = JSON.parse(raw) as Partial<GameSettings>;
     return {
+      gameMode: parseGameMode(parsed.gameMode),
       userSideVsAi: parsed.userSideVsAi === 'han' ? 'han' : 'cho',
       player1SideLocal: parsed.player1SideLocal === 'han' ? 'han' : 'cho',
       aiDifficulty: parseAiDifficulty(parsed.aiDifficulty),
@@ -89,6 +97,17 @@ export function GameSettingsProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify(next));
   }, []);
 
+  const setGameMode = useCallback(
+    (mode: GameMode) => {
+      setSettings((current) => {
+        const next = { ...current, gameMode: mode };
+        persistSettings(next);
+        return next;
+      });
+    },
+    [persistSettings],
+  );
+
   const setUserSideVsAi = useCallback(
     (side: Side) => {
       setSettings((current) => {
@@ -126,11 +145,12 @@ export function GameSettingsProvider({ children }: { children: ReactNode }) {
     () => ({
       ...settings,
       isReady,
+      setGameMode,
       setUserSideVsAi,
       setPlayer1SideLocal,
       setAiDifficulty,
     }),
-    [isReady, setAiDifficulty, setPlayer1SideLocal, setUserSideVsAi, settings],
+    [isReady, setAiDifficulty, setGameMode, setPlayer1SideLocal, setUserSideVsAi, settings],
   );
 
   return (
