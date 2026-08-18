@@ -518,7 +518,7 @@ export default function GameScreen() {
         </View>
         {board.phase !== 'setup' ? <ScoreDisplay board={board} /> : null}
         {board.phase !== 'setup' ? (
-          <View style={styles.avatarRow}>
+          <View style={[styles.avatarRow, board.phase === 'playing' && styles.avatarRowPlaying]}>
             <View style={styles.avatarSlot}>
               <PlayerAvatar avatarId={playerAvatarId} size="sm" />
               <Text style={styles.avatarLabel}>
@@ -582,7 +582,11 @@ export default function GameScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text style={styles.phaseText}>{phaseLabel}</Text>
+        <Text
+          style={[styles.phaseText, board.phase === 'playing' && styles.phaseTextPlaying]}
+        >
+          {phaseLabel}
+        </Text>
 
         {careerMessage ? <Text style={styles.careerMessage}>{careerMessage}</Text> : null}
 
@@ -682,6 +686,9 @@ const styles = StyleSheet.create({
     gap: 28,
     marginTop: 8,
   },
+  avatarRowPlaying: {
+    marginTop: 7,
+  },
   avatarSlot: {
     alignItems: 'center',
     gap: 4,
@@ -716,6 +723,9 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     textAlign: 'center',
+  },
+  phaseTextPlaying: {
+    marginTop: 1,
   },
   careerMessage: {
     color: colors.gold,
