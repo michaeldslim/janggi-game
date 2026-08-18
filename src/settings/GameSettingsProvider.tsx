@@ -8,16 +8,18 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import type { Side } from '../types/janggi';
+import type { AiDifficulty, Side } from '../types/janggi';
 
 export interface GameSettings {
   userSideVsAi: Side;
   player1SideLocal: Side;
+  aiDifficulty: AiDifficulty;
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
   userSideVsAi: 'cho',
   player1SideLocal: 'cho',
+  aiDifficulty: 'medium',
 };
 
 export const GAME_SETTINGS_STORAGE_KEY = '@janggi/game-settings';
@@ -26,9 +28,18 @@ interface GameSettingsContextValue extends GameSettings {
   isReady: boolean;
   setUserSideVsAi: (side: Side) => void;
   setPlayer1SideLocal: (side: Side) => void;
+  setAiDifficulty: (difficulty: AiDifficulty) => void;
 }
 
 const GameSettingsContext = createContext<GameSettingsContextValue | null>(null);
+
+function parseAiDifficulty(value: unknown): AiDifficulty {
+  if (value === 'easy' || value === 'medium' || value === 'hard') {
+    return value;
+  }
+
+  return 'medium';
+}
 
 function parseStoredSettings(raw: string | null): GameSettings {
   if (!raw) {
@@ -40,6 +51,7 @@ function parseStoredSettings(raw: string | null): GameSettings {
     return {
       userSideVsAi: parsed.userSideVsAi === 'han' ? 'han' : 'cho',
       player1SideLocal: parsed.player1SideLocal === 'han' ? 'han' : 'cho',
+      aiDifficulty: parseAiDifficulty(parsed.aiDifficulty),
     };
   } catch {
     return DEFAULT_GAME_SETTINGS;
@@ -73,21 +85,42 @@ export function GameSettingsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const setUserSideVsAi = useCallback((side: Side) => {
-    setSettings((current) => {
-      const next = { ...current, userSideVsAi: side };
-      void AsyncStorage.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const persistSettings = useCallback((next: GameSettings) => {
+    void AsyncStorage.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  const setPlayer1SideLocal = useCallback((side: Side) => {
-    setSettings((current) => {
-      const next = { ...current, player1SideLocal: side };
-      void AsyncStorage.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const setUserSideVsAi = useCallback(
+    (side: Side) => {
+      setSettings((current) => {
+        const next = { ...current, userSideVsAi: side };
+        persistSettings(next);
+        return next;
+      });
+    },
+    [persistSettings],
+  );
+
+  const setPlayer1SideLocal = useCallback(
+    (side: Side) => {
+      setSettings((current) => {
+        const next = { ...current, player1SideLocal: side };
+        persistSettings(next);
+        return next;
+      });
+    },
+    [persistSettings],
+  );
+
+  const setAiDifficulty = useCallback(
+    (difficulty: AiDifficulty) => {
+      setSettings((current) => {
+        const next = { ...current, aiDifficulty: difficulty };
+        persistSettings(next);
+        return next;
+      });
+    },
+    [persistSettings],
+  );
 
   const value = useMemo(
     () => ({
@@ -95,8 +128,9 @@ export function GameSettingsProvider({ children }: { children: ReactNode }) {
       isReady,
       setUserSideVsAi,
       setPlayer1SideLocal,
+      setAiDifficulty,
     }),
-    [isReady, setPlayer1SideLocal, setUserSideVsAi, settings],
+    [isReady, setAiDifficulty, setPlayer1SideLocal, setUserSideVsAi, settings],
   );
 
   return (

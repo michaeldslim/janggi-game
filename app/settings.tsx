@@ -7,7 +7,7 @@ import { colors } from '../src/constants/colors';
 import { useI18n } from '../src/i18n/I18nProvider';
 import type { Locale } from '../src/i18n';
 import { useGameSettings } from '../src/settings/GameSettingsProvider';
-import type { Side } from '../src/types/janggi';
+import type { AiDifficulty, Side } from '../src/types/janggi';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -15,8 +15,10 @@ export default function SettingsScreen() {
   const {
     userSideVsAi,
     player1SideLocal,
+    aiDifficulty,
     setUserSideVsAi,
     setPlayer1SideLocal,
+    setAiDifficulty,
   } = useGameSettings();
 
   const languageOptions = [
@@ -30,6 +32,15 @@ export default function SettingsScreen() {
       { value: 'han' as Side, label: sideLabel('han', true) },
     ],
     [sideLabel],
+  );
+
+  const difficultyOptions = useMemo(
+    () => [
+      { value: 'easy' as AiDifficulty, label: t('settings.difficultyEasy') },
+      { value: 'medium' as AiDifficulty, label: t('settings.difficultyMedium') },
+      { value: 'hard' as AiDifficulty, label: t('settings.difficultyHard') },
+    ],
+    [t],
   );
 
   return (
@@ -47,6 +58,16 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
           <Text style={styles.sectionDescription}>{t('settings.languageDescription')}</Text>
           <ChipGroup options={languageOptions} value={locale} onChange={setLocale} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('settings.aiDifficulty')}</Text>
+          <Text style={styles.sectionDescription}>{t('settings.aiDifficultyDescription')}</Text>
+          <ChipGroup
+            options={difficultyOptions}
+            value={aiDifficulty}
+            onChange={setAiDifficulty}
+          />
         </View>
 
         <View style={styles.section}>

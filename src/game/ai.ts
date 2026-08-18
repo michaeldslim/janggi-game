@@ -1,8 +1,9 @@
-import type { BoardState, Piece, PieceType, Position, Side } from '../types/janggi';
-import { positionsEqual } from '../utils/coordinates';
+import type { AiDifficulty, BoardState, Piece, PieceType, Side } from '../types/janggi';
 import { applyMove } from './applyMove';
+import { AI_DIFFICULTY_CONFIG } from './aiDifficulty';
 import { getPieceAt } from './boardUtils';
-import { getAllLegalMovesForSide, getRawMovesForPiece, type Move } from './moves';
+import { isSquareAttackedBy } from './check';
+import { getAllLegalMovesForSide, type Move } from './moves';
 
 const PIECE_VALUES: Record<PieceType, number> = {
   general: 1000,
@@ -14,27 +15,12 @@ const PIECE_VALUES: Record<PieceType, number> = {
   soldier: 2,
 };
 
-function isSquareAttackedBy(board: BoardState, position: Position, attackerSide: Side): boolean {
-  for (const piece of board.pieces) {
-    if (piece.side !== attackerSide) {
-      continue;
-    }
-
-    const moves = getRawMovesForPiece(board, piece);
-    if (moves.some((move) => positionsEqual(move, position))) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function getEnemyGeneral(board: BoardState, side: Side): Piece | undefined {
   const enemySide: Side = side === 'cho' ? 'han' : 'cho';
   return board.pieces.find((piece) => piece.side === enemySide && piece.type === 'general');
 }
 
-function scoreMove(board: BoardState, move: Move): number {
+function scoreMove(board: BoardState, move: Move, scoreNoise: number): number {
   const { piece, destination } = move;
   const nextBoard = applyMove(board, piece, destination);
   const captured = getPieceAt(board.pieces, destination);
@@ -47,7 +33,7 @@ function scoreMove(board: BoardState, move: Move): number {
   const enemyGeneral = getEnemyGeneral(board, piece.side);
   if (
     enemyGeneral &&
-    isSquareAttackedBy(nextBoard, enemyGeneral.position, piece.side)
+    isSquareAttackedBy(nextBoard.pieces, enemyGeneral.position, piece.side)
   ) {
     score += 18;
   }
@@ -63,7 +49,7 @@ function scoreMove(board: BoardState, move: Move): number {
   }
 
   const enemySide: Side = piece.side === 'cho' ? 'han' : 'cho';
-  if (isSquareAttackedBy(nextBoard, destination, enemySide)) {
+  if (isSquareAttackedBy(nextBoard.pieces, destination, enemySide)) {
     score -= PIECE_VALUES[piece.type] * 2.5;
   }
 
@@ -71,25 +57,30 @@ function scoreMove(board: BoardState, move: Move): number {
     score -= 6;
   }
 
-  score += Math.random() * 2.5;
+  score += Math.random() * scoreNoise;
 
   return score;
 }
 
-export function pickAiMove(board: BoardState, aiSide: Side): Move | null {
+export function pickAiMove(
+  board: BoardState,
+  aiSide: Side,
+  difficulty: AiDifficulty = 'medium',
+): Move | null {
   const moves = getAllLegalMovesForSide(board, aiSide);
   if (moves.length === 0) {
     return null;
   }
 
+  const config = AI_DIFFICULTY_CONFIG[difficulty];
   const scored = moves
-    .map((move) => ({ move, score: scoreMove(board, move) }))
+    .map((move) => ({ move, score: scoreMove(board, move, config.scoreNoise) }))
     .sort((left, right) => right.score - left.score);
 
-  const topCount = Math.min(4, scored.length);
+  const topCount = Math.min(config.topMoveCount, scored.length);
   const topMoves = scored.slice(0, topCount);
 
-  if (Math.random() < 0.68) {
+  if (Math.random() < config.bestMoveProbability) {
     return topMoves[0].move;
   }
 
