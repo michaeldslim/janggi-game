@@ -14,6 +14,8 @@ export const colors = {
   buttonText: '#FFF8E7',
   moveDot: '#22C55E',
   moveCapture: '#4ADE80',
+  captureTargetRing: '#F97316',
+  captureTargetGlow: 'rgba(249, 115, 22, 0.28)',
   lastMoveFrom: 'rgba(245, 158, 11, 0.3)',
   lastMoveRing: '#F59E0B',
   checkRing: '#EF4444',

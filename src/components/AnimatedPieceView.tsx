@@ -18,6 +18,7 @@ interface AnimatedPieceViewProps {
   selected?: boolean;
   lastMoved?: boolean;
   inCheck?: boolean;
+  isCaptureTarget?: boolean;
 }
 
 function toPieceOrigin(file: number, rank: number, layout: BoardLayout) {
@@ -64,6 +65,7 @@ export function AnimatedPieceView({
   selected = false,
   lastMoved = false,
   inCheck = false,
+  isCaptureTarget = false,
 }: AnimatedPieceViewProps) {
   const radius = layout.pieceRadius;
   const diameter = radius * 2;
@@ -200,6 +202,34 @@ export function AnimatedPieceView({
           ]}
         />
       ) : null}
+      {isCaptureTarget ? (
+        <View
+          style={[
+            styles.captureGlow,
+            {
+              width: diameter + 14,
+              height: diameter + 14,
+              borderRadius: radius + 7,
+              left: -7,
+              top: -7,
+            },
+          ]}
+        />
+      ) : null}
+      {isCaptureTarget ? (
+        <View
+          style={[
+            styles.captureRing,
+            {
+              width: diameter + 10,
+              height: diameter + 10,
+              borderRadius: radius + 5,
+              left: -5,
+              top: -5,
+            },
+          ]}
+        />
+      ) : null}
       <View
         style={[
           styles.disc,
@@ -238,6 +268,15 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderColor: colors.checkRing,
     borderWidth: 3,
+  },
+  captureGlow: {
+    position: 'absolute',
+    backgroundColor: colors.captureTargetGlow,
+  },
+  captureRing: {
+    position: 'absolute',
+    borderColor: colors.captureTargetRing,
+    borderWidth: 3.5,
   },
   lastMovedRing: {
     position: 'absolute',

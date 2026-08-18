@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useMemo } from 'react';
 import Svg from 'react-native-svg';
 import type { BoardState, LastMove, Piece, Position, Side } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
@@ -34,6 +35,19 @@ export function BoardWithPieces({
 }: BoardWithPiecesProps) {
   const showLastMove = emphasizeLastMove && lastMove !== undefined;
 
+  const captureTargetPieceIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    for (const position of legalMoves) {
+      const occupant = getPieceAt(board.pieces, position);
+      if (occupant) {
+        ids.add(occupant.id);
+      }
+    }
+
+    return ids;
+  }, [board.pieces, legalMoves]);
+
   return (
     <View style={[styles.container, { width: layout.width, height: layout.height }]}>
       <Svg width={layout.width} height={layout.height}>
@@ -43,6 +57,10 @@ export function BoardWithPieces({
         ) : null}
         {legalMoves.map((position) => {
           const occupant = getPieceAt(board.pieces, position);
+          if (occupant) {
+            return null;
+          }
+
           const key = `${position.file},${position.rank}`;
 
           return (
@@ -50,7 +68,6 @@ export function BoardWithPieces({
               key={key}
               position={position}
               layout={layout}
-              isCapture={occupant !== undefined}
             />
           );
         })}
@@ -64,6 +81,7 @@ export function BoardWithPieces({
           selected={piece.id === selectedPieceId}
           lastMoved={showLastMove && piece.id === lastMove.pieceId}
           inCheck={inCheckSide === piece.side && piece.type === 'general'}
+          isCaptureTarget={captureTargetPieceIds.has(piece.id)}
         />
       ))}
 
