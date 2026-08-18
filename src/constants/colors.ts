@@ -16,4 +16,5 @@ export const colors = {
   moveCapture: '#4ADE80',
   lastMoveFrom: 'rgba(245, 158, 11, 0.3)',
   lastMoveRing: '#F59E0B',
+  checkRing: '#EF4444',
 } as const;

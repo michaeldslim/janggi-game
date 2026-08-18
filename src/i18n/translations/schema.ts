@@ -12,6 +12,11 @@ export interface TranslationSchema {
     aiSideDescription: string;
     player1Side: string;
     player1SideDescription: string;
+    aiDifficulty: string;
+    aiDifficultyDescription: string;
+    difficultyEasy: string;
+    difficultyMedium: string;
+    difficultyHard: string;
   };
   language: {
     en: string;
@@ -38,6 +43,20 @@ export interface TranslationSchema {
     moveCount: string;
     youAreSide: string;
     ai: string;
+    check: string;
+    passTurn: string;
+    checkmate: string;
+    stalemate: string;
+    youWinCheckmate: string;
+    aiWinsCheckmate: string;
+    sideWinsCheckmate: string;
+    bikjang: string;
+    hanKomi: string;
+    deom: string;
+    youWinScore: string;
+    aiWinsScore: string;
+    sideWinsScore: string;
+    drawByScore: string;
   };
   side: {
     cho: string;

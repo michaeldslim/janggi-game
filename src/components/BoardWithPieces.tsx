@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg from 'react-native-svg';
-import type { BoardState, LastMove, Piece, Position } from '../types/janggi';
+import type { BoardState, LastMove, Piece, Position, Side } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
 import { getTouchTargetStyle } from '../utils/coordinates';
 import { getPieceAt } from '../game/boardUtils';
@@ -18,6 +18,7 @@ interface BoardWithPiecesProps {
   legalMoves?: Position[];
   lastMove?: LastMove;
   emphasizeLastMove?: boolean;
+  inCheckSide?: Side | null;
 }
 
 export function BoardWithPieces({
@@ -29,6 +30,7 @@ export function BoardWithPieces({
   legalMoves = [],
   lastMove,
   emphasizeLastMove = false,
+  inCheckSide = null,
 }: BoardWithPiecesProps) {
   const showLastMove = emphasizeLastMove && lastMove !== undefined;
 
@@ -61,6 +63,7 @@ export function BoardWithPieces({
           layout={layout}
           selected={piece.id === selectedPieceId}
           lastMoved={showLastMove && piece.id === lastMove.pieceId}
+          inCheck={inCheckSide === piece.side && piece.type === 'general'}
         />
       ))}
 

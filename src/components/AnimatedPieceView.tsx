@@ -17,6 +17,7 @@ interface AnimatedPieceViewProps {
   layout: BoardLayout;
   selected?: boolean;
   lastMoved?: boolean;
+  inCheck?: boolean;
 }
 
 function toPieceOrigin(file: number, rank: number, layout: BoardLayout) {
@@ -62,6 +63,7 @@ export function AnimatedPieceView({
   layout,
   selected = false,
   lastMoved = false,
+  inCheck = false,
 }: AnimatedPieceViewProps) {
   const radius = layout.pieceRadius;
   const diameter = radius * 2;
@@ -184,6 +186,20 @@ export function AnimatedPieceView({
           ]}
         />
       ) : null}
+      {inCheck ? (
+        <View
+          style={[
+            styles.checkRing,
+            {
+              width: diameter + 10,
+              height: diameter + 10,
+              borderRadius: radius + 5,
+              left: -5,
+              top: -5,
+            },
+          ]}
+        />
+      ) : null}
       <View
         style={[
           styles.disc,
@@ -217,6 +233,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderColor: '#FACC15',
     borderWidth: 2.5,
+  },
+  checkRing: {
+    position: 'absolute',
+    borderColor: colors.checkRing,
+    borderWidth: 3,
   },
   lastMovedRing: {
     position: 'absolute',
