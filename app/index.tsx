@@ -4,12 +4,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BoardWithPieces } from '../src/components/BoardWithPieces';
 import { CapturedPiecesTray } from '../src/components/CapturedPiecesTray';
+import { ScoreDisplay } from '../src/components/ScoreDisplay';
 import { SettingsIcon } from '../src/components/SettingsIcon';
 import { colors } from '../src/constants/colors';
 import { getPieceHanja } from '../src/constants/pieces';
 import { pickAiMove } from '../src/game/ai';
-import { applyMove } from '../src/game/applyMove';
+import { applyMove, passTurn } from '../src/game/applyMove';
 import { getOppositeSide } from '../src/game/boardUtils';
+import { isInCheck } from '../src/game/check';
 import { getLegalMovesForPiece } from '../src/game/moves';
 import { useBoardLayout } from '../src/hooks/useBoardLayout';
 import { useMoveSound } from '../src/hooks/useMoveSound';
@@ -29,7 +31,7 @@ const AI_THINK_DELAY_MS = 550;
 export default function GameScreen() {
   const router = useRouter();
   const { t, sideLabel, pieceLabel } = useI18n();
-  const { userSideVsAi, player1SideLocal } = useGameSettings();
+  const { userSideVsAi, player1SideLocal, aiDifficulty } = useGameSettings();
   const layout = useBoardLayout();
   const playMoveSound = useMoveSound();
   const [gameMode, setGameMode] = useState<GameMode>('vsAi');
@@ -62,6 +64,18 @@ export default function GameScreen() {
   const isUserTurn =
     gameMode === 'local' ||
     (board.phase === 'playing' && board.turn === userSide && !isAiThinking);
+
+  const inCheckSide = useMemo(() => {
+    if (board.phase !== 'playing') {
+      return null;
+    }
+
+    return isInCheck(board, board.turn) ? board.turn : null;
+  }, [board]);
+
+  const canPassTurn = useMemo(() => {
+    return board.phase === 'playing' && isUserTurn && inCheckSide === null;
+  }, [board.phase, inCheckSide, isUserTurn]);
 
   const handlePiecePress = useCallback(
     (piece: Piece) => {
@@ -145,6 +159,15 @@ export default function GameScreen() {
     setIsAiThinking(false);
   }, []);
 
+  const handlePassTurn = useCallback(() => {
+    if (!canPassTurn) {
+      return;
+    }
+
+    setBoard((current) => passTurn(current));
+    setSelectedPieceId(null);
+  }, [canPassTurn]);
+
   const handleModeChange = useCallback((mode: GameMode) => {
     setGameMode(mode);
     setBoard(createInitialBoard());
@@ -171,7 +194,7 @@ export default function GameScreen() {
       }
 
       const currentBoard = boardRef.current;
-      const aiMove = pickAiMove(currentBoard, aiSide);
+      const aiMove = pickAiMove(currentBoard, aiSide, aiDifficulty);
 
       if (aiMove) {
         setBoard((previous) => applyMove(previous, aiMove.piece, aiMove.destination));
@@ -185,7 +208,7 @@ export default function GameScreen() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [aiSide, board.moveCount, board.phase, board.turn, gameMode, playMoveSound]);
+  }, [aiDifficulty, aiSide, board.moveCount, board.phase, board.turn, gameMode, playMoveSound]);
 
   const emphasizeLastMove = useMemo(() => {
     if (!board.lastMove || board.phase !== 'playing') {
@@ -201,6 +224,42 @@ export default function GameScreen() {
 
   const phaseLabel = useMemo(() => {
     if (board.phase === 'finished') {
+      if (board.finishReason === 'bikjang') {
+        return t('game.bikjang');
+      }
+
+      if (board.finishReason === 'score') {
+        if (!board.winner) {
+          return t('game.drawByScore');
+        }
+
+        if (gameMode === 'vsAi') {
+          return board.winner === userSide
+            ? t('game.youWinScore')
+            : t('game.aiWinsScore');
+        }
+
+        return t('game.sideWinsScore', {
+          side: sideLabel(board.winner, true),
+        });
+      }
+
+      if (board.finishReason === 'stalemate') {
+        return t('game.stalemate');
+      }
+
+      if (board.finishReason === 'checkmate') {
+        if (gameMode === 'vsAi') {
+          return board.winner === userSide
+            ? t('game.youWinCheckmate')
+            : t('game.aiWinsCheckmate');
+        }
+
+        return t('game.sideWinsCheckmate', {
+          side: sideLabel(board.winner ?? 'cho', true),
+        });
+      }
+
       if (gameMode === 'vsAi') {
         return board.winner === userSide ? t('game.youWin') : t('game.aiWins');
       }
@@ -221,6 +280,10 @@ export default function GameScreen() {
 
     if (gameMode === 'vsAi' && isAiThinking) {
       return t('game.aiThinking');
+    }
+
+    if (inCheckSide) {
+      return t('game.check');
     }
 
     if (emphasizeLastMove && board.lastMove) {
@@ -259,10 +322,12 @@ export default function GameScreen() {
   }, [
     board.lastMove,
     board.phase,
+    board.finishReason,
     board.turn,
     board.winner,
     emphasizeLastMove,
     gameMode,
+    inCheckSide,
     isAiThinking,
     pieceLabel,
     player1Side,
@@ -289,6 +354,7 @@ export default function GameScreen() {
             <SettingsIcon size={24} color={colors.textMuted} />
           </Pressable>
         </View>
+        {board.phase !== 'setup' ? <ScoreDisplay board={board} /> : null}
       </View>
 
       <View style={styles.boardContainer}>
@@ -310,6 +376,7 @@ export default function GameScreen() {
             legalMoves={isUserTurn ? legalMoves : []}
             lastMove={board.lastMove}
             emphasizeLastMove={emphasizeLastMove}
+            inCheckSide={inCheckSide}
           />
 
           {board.phase !== 'setup' ? (
@@ -371,6 +438,12 @@ export default function GameScreen() {
         {board.phase === 'setup' ? (
           <Pressable style={styles.button} onPress={handleStartGame}>
             <Text style={styles.buttonText}>{t('game.startGame')}</Text>
+          </Pressable>
+        ) : null}
+
+        {canPassTurn ? (
+          <Pressable style={styles.passButton} onPress={handlePassTurn}>
+            <Text style={styles.passButtonText}>{t('game.passTurn')}</Text>
           </Pressable>
         ) : null}
 
@@ -469,6 +542,18 @@ const styles = StyleSheet.create({
   buttonText: {
     color: colors.buttonText,
     fontSize: 16,
+    fontWeight: '600',
+  },
+  passButton: {
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.textMuted,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  passButtonText: {
+    color: colors.textPrimary,
+    fontSize: 15,
     fontWeight: '600',
   },
   turnText: {
