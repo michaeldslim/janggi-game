@@ -11,7 +11,11 @@ export type PieceType =
 
 export type GamePhase = 'setup' | 'playing' | 'finished';
 
+export type FinishReason = 'capture' | 'checkmate' | 'stalemate' | 'bikjang' | 'score';
+
 export type GameMode = 'local' | 'vsAi';
+
+export type AiDifficulty = 'easy' | 'medium' | 'hard';
 
 export interface Position {
   file: number;
@@ -60,4 +64,6 @@ export interface BoardState {
   captured: CapturedPieces;
   lastMove?: LastMove;
   winner?: Side;
+  finishReason?: FinishReason;
+  consecutivePasses?: number;
 }
