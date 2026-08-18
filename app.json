@@ -2,17 +2,17 @@
   "expo": {
     "name": "Janggi",
     "slug": "janggi-game",
-    "version": "1.0.0",
+    "version": "2.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "janggi",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.janggi.game"
+      "bundleIdentifier": "com.mike008.janggi"
     },
     "android": {
-      "package": "com.janggi.game",
+      "package": "com.mike008.janggi",
       "adaptiveIcon": {
         "backgroundColor": "#C4A574",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -27,6 +27,17 @@
     "plugins": [
       "expo-router",
       "expo-localization"
-    ]
+    ],
+    "updates": {
+      "url": "https://u.expo.dev/d6e7817c-64a0-43c2-88a6-5e6a505a086b"
+    },
+    "runtimeVersion": "2.1.0",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d6e7817c-64a0-43c2-88a6-5e6a505a086b"
+      }
+    },
+    "owner": "mike008"
   }
 }

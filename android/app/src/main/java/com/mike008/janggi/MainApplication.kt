@@ -1,4 +1,4 @@
-package com.janggi.game
+package com.mike008.janggi
 
 import android.app.Application
 import android.content.res.Configuration

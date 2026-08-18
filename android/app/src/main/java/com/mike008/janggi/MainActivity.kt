@@ -1,4 +1,4 @@
-package com.janggi.game
+package com.mike008.janggi
 
 import android.os.Build
 import android.os.Bundle

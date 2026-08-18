@@ -9,19 +9,12 @@ function isCareerRank(value: unknown): value is CareerRank {
   return typeof value === 'string' && CAREER_RANK_ORDER.includes(value as CareerRank);
 }
 
-function resolvePromotionWins(parsed: Partial<CareerState> & { promotionStreak?: number }): number {
-  const raw =
-    typeof parsed.promotionWins === 'number'
-      ? parsed.promotionWins
-      : typeof parsed.promotionStreak === 'number'
-        ? parsed.promotionStreak
-        : 0;
-
-  if (Number.isNaN(raw) || raw < 0) {
+function resolvePromotionWins(value: unknown): number {
+  if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
     return 0;
   }
 
-  return Math.floor(raw);
+  return Math.floor(value);
 }
 
 export function parseCareerState(raw: string | null): CareerState {
@@ -30,7 +23,7 @@ export function parseCareerState(raw: string | null): CareerState {
   }
 
   try {
-    const parsed = JSON.parse(raw) as Partial<CareerState> & { promotionStreak?: number };
+    const parsed = JSON.parse(raw) as Partial<CareerState>;
     const rank = isCareerRank(parsed.rank) ? parsed.rank : DEFAULT_CAREER_STATE.rank;
     const highestRankAchieved = isCareerRank(parsed.highestRankAchieved)
       ? parsed.highestRankAchieved
@@ -38,7 +31,7 @@ export function parseCareerState(raw: string | null): CareerState {
 
     return {
       rank,
-      promotionWins: resolvePromotionWins(parsed),
+      promotionWins: resolvePromotionWins(parsed.promotionWins),
       highestRankAchieved,
     };
   } catch {

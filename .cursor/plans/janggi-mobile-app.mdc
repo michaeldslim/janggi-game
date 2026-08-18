@@ -1,6 +1,6 @@
 ---
 name: Janggi Mobile App
-overview: React Native + Expo + TypeScript로 한국 장기 모바일 앱 구현. Phase 1–5 완료.
+overview: React Native + Expo + TypeScript로 한국 장기 모바일 앱. Phase 1–6 완료. 이 저장소만 기준으로 개발 — 외부 게임 프로젝트 참조 불필요.
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩 및 기본 폴더 구조
@@ -71,6 +71,15 @@ todos:
   - id: ai-difficulty
     content: AI 난이도 선택 (쉬움/보통/어려움) 설정 + pickAiMove 연동
     status: completed
+  - id: career-progression
+    content: 승진제 — 인턴→사장, AI 대전 누적 승리, 사다리 화면, PromotionOverlay
+    status: completed
+  - id: avatars
+    content: 플레이어·AI 아바타 선택 (설정) + 게임/메인 UI 표시
+    status: completed
+  - id: android-package
+    content: Android/iOS bundle ID com.mike008.janggi
+    status: completed
 isProject: true
 ---
 
@@ -86,6 +95,9 @@ isProject: true
 - **Phase 3** ✅: 체크/체크메이트 필터링, 한수쉼
 - **Phase 4** ✅: 비장(bikjang), 점수(듬)
 - **Phase 5** ✅: AI 난이도 선택
+- **Phase 6** ✅: 승진제, 아바타, `com.mike008.janggi` 패키지 ID
+
+**Scope:** 기능·규칙·UI는 이 repo의 plan과 `src/` 코드만 참고. 다른 앱 프로젝트와의 cross-reference는 하지 않음.
 
 ---
 
@@ -98,9 +110,11 @@ isProject: true
 | Rendering | `react-native-svg` + RN `Animated` | 보드=SVG, 기물=오버레이 View (애니메이션) |
 | Audio | `expo-audio` | `useAudioPlayer` + `assets/sounds/stone.mp3` |
 | State | React `useState` / `useMemo` | Phase 3+에서 reducer 또는 Zustand 검토 |
-| Settings persistence | AsyncStorage | 언어, 진영, AI 난이도 (`@react-native-async-storage/async-storage`) |
+| Settings persistence | AsyncStorage | 언어, 진영, AI 난이도, 아바타, 승진 모드 |
+| Career persistence | AsyncStorage | `@janggi/career` — rank, promotionWins |
 | i18n | Custom `I18nProvider` | `expo-localization` 기기 언어 감지 + `en`/`ko` 번역 파일 |
-| Navigation | Expo Router | `app/index.tsx` 게임, `app/settings.tsx` 설정 |
+| Navigation | Expo Router | `app/index.tsx` 게임, `app/settings.tsx`, `app/career.tsx` |
+| Bundle ID | `com.mike008.janggi` | `app.json` + `android/app/build.gradle` |
 | Touch | RN `Pressable` 오버레이 | SVG onPress 대신 넓은 히트 영역 (min 48px) |
 
 ---
@@ -109,18 +123,22 @@ isProject: true
 
 ```
 app/
-  _layout.tsx          # I18nProvider + GameSettingsProvider + Stack
-  index.tsx            # 게임 화면
-  settings.tsx         # 언어·진영·AI 난이도 설정
+  _layout.tsx          # I18nProvider + GameSettingsProvider + CareerProvider + Stack
+  index.tsx            # 게임 화면 (setup=메인, 아바타+승진 뱃지, ⚙는 setup만)
+  settings.tsx         # 언어·진영·난이도·아바타·승진 모드
+  career.tsx           # 승진 사다리
 src/
-  components/          # Board, AnimatedPieceView, CapturedPiecesTray, ChipGroup, …
-  constants/           # board, colors, pieces (getPieceHanja)
+  career/              # careerRules, careerProgress, CareerProvider, …
+  components/          # Board, PlayerAvatar, AvatarPicker, PromotionOverlay, …
+  constants/           # board, colors, pieces, avatars
   game/                # moves, applyMove, ai, aiDifficulty, palace, boardUtils
-  hooks/               # useBoardLayout, useMoveSound
-  i18n/                # translations (en/ko), I18nProvider
-  settings/            # GameSettingsProvider (진영·난이도 persist)
-  types/               # janggi.ts
-  utils/               # coordinates, setup
+  hooks/               # useBoardLayout, useMoveSound, useGameMessageAnimation
+  i18n/                # translations (en/ko), I18nProvider — placeholders `{{key}}`
+  settings/            # GameSettingsProvider
+  types/               # janggi.ts, career.ts
+  utils/               # coordinates, setup, bumpyCircle
+scripts/
+  verify-career-progress.ts
 ```
 
 ---
@@ -219,10 +237,12 @@ Rank 9:  車 馬 象 士 楚 士 象 馬 車
 ### Settings (`app/settings.tsx`)
 
 - **언어**: English / 한국어 (칩 토글, AsyncStorage 저장)
+- **아바타**: 플레이어 / AI (10종 그리드)
 - **AI 난이도**: 쉬움 / 보통 / 어려움
 - **AI 대전 진영**: 초(파랑) / 한(빨강)
 - **2인 대전 플레이어 1 진영**: 초 / 한
-- 게임 화면 우측 상단 ⚙ 기어 아이콘으로 진입
+- **승진 모드**: on/off + 규칙 요약 + 승진 현황 링크
+- 게임 **setup** 단계에서만 ⚙ 기어로 진입 (playing/finished 중 숨김)
 
 ---
 
@@ -344,6 +364,54 @@ winner?: Side
 - [x] 설정에서 AI 난이도 선택
 - [x] 난이도 설정 AsyncStorage persist
 - [x] 쉬움/보통/어려움에 따라 AI 수 품질 변화
+
+---
+
+## Phase 6 — Complete ✅
+
+### Career progression (승진제)
+
+- **직급**: 인턴 → 사원 → 대리 → 과장 → 차장 → 부장 → 전무 → 사장
+- **카운트**: `promotionWins` — 현재 직급에서의 **누적 AI 승리** (연승 불필요)
+- **패배**: 승수·직급 유지, 강등 없음
+- **무승부** (비장·스테일메이트·점수무): 변동 없음
+- **2인 대전**: 승진 미적용
+- **승진 시**: 직급 +1, `promotionWins` 0 리셋, 한 판에 1단계만
+- **난이도 게이트**: 차장+ 보통+, 부장+·전무+ 어려움
+
+| 현재 직급 | 다음까지 승수 | 최소 AI 난이도 |
+|-----------|--------------|----------------|
+| 인턴 | 3 | — |
+| 사원 | 5 | — |
+| 대리 | 7 | — |
+| 과장 | 10 | — |
+| 차장 | 5 | 보통+ |
+| 부장 | 7 | 어려움 |
+| 전무 | 5 | 어려움 |
+
+- `src/career/careerProgress.ts` — `applyMatchResult()`
+- `app/career.tsx` — 사다리 UI
+- `PromotionOverlay` — 승진 연출
+- `npm run verify:career` — 단위 검증
+
+### Avatars
+
+- `assets/avatars/` + `src/constants/avatars.ts`
+- 설정에서 플레이어·AI 선택
+- setup 메인: 플레이어 아바타(lg) + 승진 뱃지
+- playing: 플레이어·AI(sm) 헤더
+
+### Package ID
+
+- `com.mike008.janggi` — `app.json`, Android namespace/applicationId
+
+### Acceptance Criteria — Phase 6
+
+- [x] 승진 모드 + AsyncStorage persist
+- [x] AI 승리 시 promotionWins 증가 (연승 아님)
+- [x] 승진 사다리 화면
+- [x] 아바타 설정·표시
+- [x] bundle ID `com.mike008.janggi`
 
 ---
 

@@ -87,15 +87,33 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.janggi.game'
+    namespace 'com.mike008.janggi'
     defaultConfig {
-        applicationId 'com.janggi.game'
+        applicationId 'com.mike008.janggi'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
-        versionName "1.0.0"
+        versionName "2.1.0"
 
         buildConfigField "String", "REACT_NATIVE_RELEASE_LEVEL", "\"${findProperty('reactNativeReleaseLevel') ?: 'stable'}\""
+    }
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            outputFileName = "Janggi-${outputFileName}"
+        }
+    }
+    // Rename AAB output (bundleRelease) to match APK naming convention
+    tasks.whenTaskAdded { task ->
+        if (task.name == 'bundleRelease') {
+            task.doLast {
+                def aabDir = file("${buildDir}/outputs/bundle/release")
+                def oldFile = new File(aabDir, 'app-release.aab')
+                def newFile = new File(aabDir, 'Janggi-app-release.aab')
+                if (oldFile.exists()) { 
+                    oldFile.renameTo(newFile)
+                }
+            }
+        }
     }
     signingConfigs {
         debug {
