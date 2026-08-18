@@ -33,3 +33,7 @@ export function canCapture(movingPiece: Piece, target: Piece | undefined): boole
 export function addPosition(position: Position, deltaFile: number, deltaRank: number): Position {
   return { file: position.file + deltaFile, rank: position.rank + deltaRank };
 }
+
+export function findGeneral(pieces: Piece[], side: Side): Piece | undefined {
+  return pieces.find((piece) => piece.side === side && piece.type === 'general');
+}
