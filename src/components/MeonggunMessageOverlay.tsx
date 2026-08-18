@@ -19,7 +19,7 @@ export function MeonggunMessageOverlay({
   boardWidth,
   boardHeight,
 }: MeonggunMessageOverlayProps) {
-  const { visible, opacity, scale, translateY } = useGameMessageAnimation(triggerKey);
+  const { visible, opacity, scale, translateY } = useGameMessageAnimation(triggerKey, 'meonggun');
 
   if (!visible) {
     return null;

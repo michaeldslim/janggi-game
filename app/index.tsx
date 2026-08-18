@@ -19,6 +19,7 @@ import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
 import { getPieceHanja } from '../src/constants/pieces';
 import { pickAiMove } from '../src/game/ai';
+import { getAiThinkDelayMs } from '../src/game/aiSpeed';
 import { applyMove, passTurn } from '../src/game/applyMove';
 import { getOppositeSide } from '../src/game/boardUtils';
 import { isInCheck } from '../src/game/check';
@@ -38,8 +39,6 @@ import {
   toggleWingSwap,
 } from '../src/utils/setup';
 
-const AI_THINK_DELAY_MS = 550;
-
 function isCareerDraw(board: BoardState): boolean {
   if (board.finishReason === 'stalemate' || board.finishReason === 'bikjang') {
     return true;
@@ -56,6 +55,7 @@ export default function GameScreen() {
     userSideVsAi,
     player1SideLocal,
     aiDifficulty,
+    aiSpeed,
     playerAvatarId,
     aiAvatarId,
     careerModeEnabled,
@@ -288,13 +288,13 @@ export default function GameScreen() {
       }
 
       setIsAiThinking(false);
-    }, AI_THINK_DELAY_MS);
+    }, getAiThinkDelayMs(aiSpeed));
 
     return () => {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [aiDifficulty, aiSide, board.moveCount, board.phase, board.turn, gameMode, playMoveSound]);
+  }, [aiDifficulty, aiSide, aiSpeed, board.moveCount, board.phase, board.turn, gameMode, playMoveSound]);
 
   useEffect(() => {
     if (
@@ -604,9 +604,20 @@ export default function GameScreen() {
           </Pressable>
         ) : null}
 
-        {canPassTurn ? (
-          <Pressable style={styles.passButton} onPress={handlePassTurn}>
-            <Text style={styles.passButtonText}>{t('game.passTurn')}</Text>
+        {board.phase === 'playing' ? (
+          <Pressable
+            style={[styles.passButton, !canPassTurn && styles.passButtonDisabled]}
+            onPress={handlePassTurn}
+            disabled={!canPassTurn}
+          >
+            <Text
+              style={[
+                styles.passButtonText,
+                !canPassTurn && styles.passButtonTextDisabled,
+              ]}
+            >
+              {t('game.passTurn')}
+            </Text>
           </Pressable>
         ) : null}
 
@@ -730,10 +741,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
   },
+  passButtonDisabled: {
+    opacity: 0.35,
+  },
   passButtonText: {
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '600',
+  },
+  passButtonTextDisabled: {
+    color: colors.textMuted,
   },
   turnText: {
     color: colors.textPrimary,

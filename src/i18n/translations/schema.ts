@@ -21,6 +21,11 @@ export interface TranslationSchema {
     difficultyEasy: string;
     difficultyMedium: string;
     difficultyHard: string;
+    aiSpeed: string;
+    aiSpeedDescription: string;
+    speedSlow: string;
+    speedMedium: string;
+    speedFast: string;
     avatars: string;
     playerAvatar: string;
     playerAvatarDescription: string;

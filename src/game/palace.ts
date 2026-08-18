@@ -10,10 +10,10 @@ type PalaceBounds = {
 };
 
 const HAN_PALACE_MOVES: Record<string, Position[]> = {
-  '3,0': [{ file: 4, rank: 0 }, { file: 4, rank: 1 }],
+  '3,0': [{ file: 4, rank: 0 }, { file: 4, rank: 1 }, { file: 3, rank: 1 }],
   '4,0': [{ file: 3, rank: 0 }, { file: 5, rank: 0 }, { file: 4, rank: 1 }],
-  '5,0': [{ file: 4, rank: 0 }, { file: 4, rank: 1 }],
-  '3,1': [{ file: 4, rank: 1 }],
+  '5,0': [{ file: 4, rank: 0 }, { file: 4, rank: 1 }, { file: 5, rank: 1 }],
+  '3,1': [{ file: 3, rank: 0 }, { file: 3, rank: 2 }, { file: 4, rank: 1 }],
   '4,1': [
     { file: 3, rank: 1 },
     { file: 5, rank: 1 },
@@ -24,10 +24,10 @@ const HAN_PALACE_MOVES: Record<string, Position[]> = {
     { file: 3, rank: 2 },
     { file: 5, rank: 2 },
   ],
-  '5,1': [{ file: 4, rank: 1 }],
-  '3,2': [{ file: 4, rank: 2 }, { file: 4, rank: 1 }],
+  '5,1': [{ file: 5, rank: 0 }, { file: 5, rank: 2 }, { file: 4, rank: 1 }],
+  '3,2': [{ file: 4, rank: 2 }, { file: 4, rank: 1 }, { file: 3, rank: 1 }],
   '4,2': [{ file: 3, rank: 2 }, { file: 5, rank: 2 }, { file: 4, rank: 1 }],
-  '5,2': [{ file: 4, rank: 2 }, { file: 4, rank: 1 }],
+  '5,2': [{ file: 4, rank: 2 }, { file: 4, rank: 1 }, { file: 5, rank: 1 }],
 };
 
 function toChoPalaceMoves(): Record<string, Position[]> {

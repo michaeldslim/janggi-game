@@ -13,7 +13,7 @@ import { colors } from '../src/constants/colors';
 import { useI18n } from '../src/i18n/I18nProvider';
 import type { Locale } from '../src/i18n';
 import { useGameSettings } from '../src/settings/GameSettingsProvider';
-import type { AiDifficulty, GameMode, Side } from '../src/types/janggi';
+import type { AiDifficulty, AiSpeed, GameMode, Side } from '../src/types/janggi';
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -23,6 +23,7 @@ export default function SettingsScreen() {
     userSideVsAi,
     player1SideLocal,
     aiDifficulty,
+    aiSpeed,
     playerAvatarId,
     aiAvatarId,
     careerModeEnabled,
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
     setUserSideVsAi,
     setPlayer1SideLocal,
     setAiDifficulty,
+    setAiSpeed,
     setPlayerAvatarId,
     setAiAvatarId,
     setCareerModeEnabled,
@@ -62,6 +64,15 @@ export default function SettingsScreen() {
       { value: 'easy' as AiDifficulty, label: t('settings.difficultyEasy') },
       { value: 'medium' as AiDifficulty, label: t('settings.difficultyMedium') },
       { value: 'hard' as AiDifficulty, label: t('settings.difficultyHard') },
+    ],
+    [t],
+  );
+
+  const speedOptions = useMemo(
+    () => [
+      { value: 'slow' as AiSpeed, label: t('settings.speedSlow') },
+      { value: 'medium' as AiSpeed, label: t('settings.speedMedium') },
+      { value: 'fast' as AiSpeed, label: t('settings.speedFast') },
     ],
     [t],
   );
@@ -112,6 +123,12 @@ export default function SettingsScreen() {
 
         {gameMode === 'vsAi' ? (
           <>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t('settings.aiSpeed')}</Text>
+              <Text style={styles.sectionDescription}>{t('settings.aiSpeedDescription')}</Text>
+              <ChipGroup options={speedOptions} value={aiSpeed} onChange={setAiSpeed} />
+            </View>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('settings.aiDifficulty')}</Text>
               <Text style={styles.sectionDescription}>{t('settings.aiDifficultyDescription')}</Text>

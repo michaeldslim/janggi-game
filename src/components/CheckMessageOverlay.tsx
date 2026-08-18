@@ -19,7 +19,7 @@ export function CheckMessageOverlay({
   boardWidth,
   boardHeight,
 }: CheckMessageOverlayProps) {
-  const { visible, opacity, scale, translateY } = useGameMessageAnimation(triggerKey);
+  const { visible, opacity, scale, translateY } = useGameMessageAnimation(triggerKey, 'check');
 
   if (!visible) {
     return null;

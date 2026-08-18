@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated } from 'react-native';
+import { playGameMessageHaptic, type GameMessageHaptic } from '../utils/haptics';
 
 const SHOW_DURATION_MS = 1000;
 const ENTER_MS = 280;
@@ -7,7 +8,10 @@ const EXIT_MS = 380;
 const INITIAL_TRANSLATE_Y = -88;
 const EXIT_TRANSLATE_Y = 112;
 
-export function useGameMessageAnimation(triggerKey: number) {
+export function useGameMessageAnimation(
+  triggerKey: number,
+  haptic?: GameMessageHaptic,
+) {
   const translateY = useRef(new Animated.Value(INITIAL_TRANSLATE_Y)).current;
   const opacity = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.55)).current;
@@ -16,6 +20,10 @@ export function useGameMessageAnimation(triggerKey: number) {
   useEffect(() => {
     if (triggerKey === 0) {
       return;
+    }
+
+    if (haptic) {
+      playGameMessageHaptic(haptic);
     }
 
     setVisible(true);
@@ -72,7 +80,7 @@ export function useGameMessageAnimation(triggerKey: number) {
     return () => {
       animation.stop();
     };
-  }, [opacity, scale, translateY, triggerKey]);
+  }, [haptic, opacity, scale, translateY, triggerKey]);
 
   return {
     visible,

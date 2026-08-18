@@ -17,6 +17,8 @@ export type GameMode = 'local' | 'vsAi';
 
 export type AiDifficulty = 'easy' | 'medium' | 'hard';
 
+export type AiSpeed = 'slow' | 'medium' | 'fast';
+
 export interface Position {
   file: number;
   rank: number;
