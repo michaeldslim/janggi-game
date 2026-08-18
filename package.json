@@ -26,7 +26,8 @@
     "android": "expo run:android",
     "android:device": "expo run:android --device",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "verify:career": "npx tsx scripts/verify-career-progress.ts"
   },
   "private": true
 }

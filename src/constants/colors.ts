@@ -19,4 +19,6 @@ export const colors = {
   checkRing: '#EF4444',
   meonggunFill: '#1D4ED8',
   meonggunStroke: '#93C5FD',
+  gold: '#C9A227',
+  promotionGlow: 'rgba(201, 162, 39, 0.35)',
 } as const;

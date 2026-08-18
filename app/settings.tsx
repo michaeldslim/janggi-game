@@ -2,7 +2,13 @@ import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { AvatarPicker } from '../src/components/AvatarPicker';
+import { CareerDifficultyBanner } from '../src/components/CareerDifficultyBanner';
 import { ChipGroup } from '../src/components/ChipGroup';
+import { SettingsToggleRow } from '../src/components/SettingsToggleRow';
+import { careerRankKey, difficultyLabel } from '../src/career/careerLabels';
+import { getDifficultySuggestion } from '../src/career/careerDifficultySuggestion';
+import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
 import { useI18n } from '../src/i18n/I18nProvider';
 import type { Locale } from '../src/i18n';
@@ -17,11 +23,18 @@ export default function SettingsScreen() {
     userSideVsAi,
     player1SideLocal,
     aiDifficulty,
+    playerAvatarId,
+    aiAvatarId,
+    careerModeEnabled,
     setGameMode,
     setUserSideVsAi,
     setPlayer1SideLocal,
     setAiDifficulty,
+    setPlayerAvatarId,
+    setAiAvatarId,
+    setCareerModeEnabled,
   } = useGameSettings();
+  const { careerState, loaded: careerLoaded } = useCareer();
 
   const languageOptions = [
     { value: 'en' as Locale, label: t('language.en') },
@@ -53,6 +66,11 @@ export default function SettingsScreen() {
     [t],
   );
 
+  const difficultySuggestion =
+    careerModeEnabled && careerLoaded
+      ? getDifficultySuggestion(careerState.rank, aiDifficulty)
+      : null;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -68,6 +86,22 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
           <Text style={styles.sectionDescription}>{t('settings.languageDescription')}</Text>
           <ChipGroup options={languageOptions} value={locale} onChange={setLocale} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('settings.avatars')}</Text>
+          <AvatarPicker
+            label={t('settings.playerAvatar')}
+            description={t('settings.playerAvatarDescription')}
+            value={playerAvatarId}
+            onChange={setPlayerAvatarId}
+          />
+          <AvatarPicker
+            label={t('settings.aiAvatar')}
+            description={t('settings.aiAvatarDescription')}
+            value={aiAvatarId}
+            onChange={setAiAvatarId}
+          />
         </View>
 
         <View style={styles.section}>
@@ -87,6 +121,20 @@ export default function SettingsScreen() {
                 onChange={setAiDifficulty}
               />
             </View>
+
+            {difficultySuggestion ? (
+              <CareerDifficultyBanner
+                message={t('career.difficultySuggest.body', {
+                  rank: t(careerRankKey(careerState.rank)),
+                  difficulty: difficultyLabel(t, difficultySuggestion.recommended),
+                })}
+                actionLabel={t('career.difficultySuggest.action', {
+                  difficulty: difficultyLabel(t, difficultySuggestion.recommended),
+                })}
+                recommendedDifficulty={difficultySuggestion.recommended}
+                onApply={setAiDifficulty}
+              />
+            ) : null}
 
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>{t('settings.aiSide')}</Text>
@@ -109,6 +157,24 @@ export default function SettingsScreen() {
             />
           </View>
         )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('settings.career')}</Text>
+          <SettingsToggleRow
+            label={t('career.modeLabel')}
+            description={t('career.modeDesc')}
+            value={careerModeEnabled}
+            onValueChange={setCareerModeEnabled}
+          />
+          {careerModeEnabled ? (
+            <Text style={styles.careerRules}>{t('career.rulesSnippet')}</Text>
+          ) : null}
+          {careerModeEnabled ? (
+            <Pressable accessibilityRole="link" onPress={() => router.push('/career')}>
+              <Text style={styles.careerLink}>{t('career.screen.title')}</Text>
+            </Pressable>
+          ) : null}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -161,5 +227,17 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontSize: 14,
     lineHeight: 20,
+  },
+  careerRules: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  careerLink: {
+    color: colors.gold,
+    fontSize: 15,
+    fontWeight: '600',
+    marginTop: 8,
   },
 });

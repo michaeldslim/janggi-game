@@ -3,6 +3,8 @@ export interface TranslationSchema {
     title: string;
     settings: string;
     back: string;
+    player: string;
+    ai: string;
   };
   settings: {
     title: string;
@@ -19,10 +21,66 @@ export interface TranslationSchema {
     difficultyEasy: string;
     difficultyMedium: string;
     difficultyHard: string;
+    avatars: string;
+    playerAvatar: string;
+    playerAvatarDescription: string;
+    aiAvatar: string;
+    aiAvatarDescription: string;
+    career: string;
   };
   language: {
     en: string;
     ko: string;
+  };
+  career: {
+    rank: {
+      intern: string;
+      staff: string;
+      assistant: string;
+      manager: string;
+      deputy: string;
+      director: string;
+      executive: string;
+      ceo: string;
+    };
+    promoted: {
+      title: string;
+      subtitle: string;
+    };
+    ceoReached: {
+      title: string;
+      subtitle: string;
+    };
+    progressNext: string;
+    lossKeepsProgress: string;
+    noProgressDifficulty: string;
+    homeBadge: string;
+    maxRank: string;
+    modeLabel: string;
+    modeDesc: string;
+    rulesSnippet: string;
+    screen: {
+      title: string;
+      currentRank: string;
+      highestRank: string;
+      ladderTitle: string;
+      disabledTitle: string;
+      disabledBody: string;
+      enableInSettings: string;
+    };
+    ladder: {
+      achieved: string;
+      current: string;
+      locked: string;
+      startingRank: string;
+      requirement: string;
+      requirementDifficulty: string;
+      progressToNext: string;
+    };
+    difficultySuggest: {
+      body: string;
+      action: string;
+    };
   };
   game: {
     vsAi: string;

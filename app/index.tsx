@@ -6,8 +6,16 @@ import { BoardWithPieces } from '../src/components/BoardWithPieces';
 import { CapturedPiecesTray } from '../src/components/CapturedPiecesTray';
 import { CheckMessageOverlay } from '../src/components/CheckMessageOverlay';
 import { MeonggunMessageOverlay } from '../src/components/MeonggunMessageOverlay';
+import { PlayerAvatar } from '../src/components/PlayerAvatar';
+import { PromotionOverlay } from '../src/components/PromotionOverlay';
 import { ScoreDisplay } from '../src/components/ScoreDisplay';
 import { SettingsIcon } from '../src/components/SettingsIcon';
+import {
+  careerRankKey,
+  getCareerProgressCopy,
+  getCareerResultMessage,
+} from '../src/career/careerLabels';
+import { useCareer } from '../src/career/CareerProvider';
 import { colors } from '../src/constants/colors';
 import { getPieceHanja } from '../src/constants/pieces';
 import { pickAiMove } from '../src/game/ai';
@@ -20,6 +28,7 @@ import { useMoveSound } from '../src/hooks/useMoveSound';
 import { useI18n } from '../src/i18n/I18nProvider';
 import { useGameSettings } from '../src/settings/GameSettingsProvider';
 import type { BoardState, Piece, Position, Side } from '../src/types/janggi';
+import type { PromotionResult } from '../src/types/career';
 import { positionsEqual } from '../src/utils/coordinates';
 import {
   createInitialBoard,
@@ -31,10 +40,27 @@ import {
 
 const AI_THINK_DELAY_MS = 550;
 
+function isCareerDraw(board: BoardState): boolean {
+  if (board.finishReason === 'stalemate' || board.finishReason === 'bikjang') {
+    return true;
+  }
+
+  return board.finishReason === 'score' && board.winner === undefined;
+}
+
 export default function GameScreen() {
   const router = useRouter();
   const { t, sideLabel, pieceLabel } = useI18n();
-  const { gameMode, userSideVsAi, player1SideLocal, aiDifficulty } = useGameSettings();
+  const {
+    gameMode,
+    userSideVsAi,
+    player1SideLocal,
+    aiDifficulty,
+    playerAvatarId,
+    aiAvatarId,
+    careerModeEnabled,
+  } = useGameSettings();
+  const { careerState, loaded: careerLoaded, recordMatchResult } = useCareer();
   const layout = useBoardLayout();
   const playMoveSound = useMoveSound();
   const [board, setBoard] = useState<BoardState>(() => createInitialBoard());
@@ -42,11 +68,14 @@ export default function GameScreen() {
   const [isAiThinking, setIsAiThinking] = useState(false);
   const [checkMessageKey, setCheckMessageKey] = useState(0);
   const [meonggunMessageKey, setMeonggunMessageKey] = useState(0);
+  const [careerResult, setCareerResult] = useState<PromotionResult | null>(null);
+  const [showPromotionOverlay, setShowPromotionOverlay] = useState(false);
   const boardRef = useRef(board);
   const previousBoardRef = useRef(board);
   const lastProcessedCheckMove = useRef(0);
   const lastProcessedMeonggunMove = useRef(0);
   const previousGameModeRef = useRef(gameMode);
+  const recordedCareerForMove = useRef<number | null>(null);
 
   const userSide: Side = gameMode === 'vsAi' ? userSideVsAi : player1SideLocal;
   const aiSide: Side = getOppositeSide(userSide);
@@ -218,6 +247,9 @@ export default function GameScreen() {
     setBoard(createInitialBoard());
     setSelectedPieceId(null);
     setIsAiThinking(false);
+    recordedCareerForMove.current = null;
+    setCareerResult(null);
+    setShowPromotionOverlay(false);
   }, []);
 
   const handlePassTurn = useCallback(() => {
@@ -263,6 +295,72 @@ export default function GameScreen() {
       clearTimeout(timeoutId);
     };
   }, [aiDifficulty, aiSide, board.moveCount, board.phase, board.turn, gameMode, playMoveSound]);
+
+  useEffect(() => {
+    if (
+      board.phase !== 'finished' ||
+      gameMode !== 'vsAi' ||
+      !careerModeEnabled ||
+      !careerLoaded
+    ) {
+      return;
+    }
+
+    if (recordedCareerForMove.current === board.moveCount) {
+      return;
+    }
+
+    recordedCareerForMove.current = board.moveCount;
+
+    const isDraw = isCareerDraw(board);
+    const won = !isDraw && board.winner === userSide;
+    const result = recordMatchResult({
+      won,
+      aiDifficulty,
+      isDraw,
+    });
+
+    if (result) {
+      setCareerResult(result);
+      if (result.promoted) {
+        setShowPromotionOverlay(true);
+      }
+    }
+  }, [
+    aiDifficulty,
+    board.finishReason,
+    board.moveCount,
+    board.phase,
+    board.winner,
+    careerLoaded,
+    careerModeEnabled,
+    gameMode,
+    recordMatchResult,
+    userSide,
+  ]);
+
+  const careerBadge =
+    careerModeEnabled && careerLoaded
+      ? getCareerProgressCopy(t, careerState).primary
+      : null;
+
+  const careerMessage =
+    board.phase === 'finished' &&
+    gameMode === 'vsAi' &&
+    careerModeEnabled &&
+    careerResult
+      ? getCareerResultMessage(t, careerResult, isCareerDraw(board))
+      : null;
+
+  const promotedRank = careerResult?.promoted ?? null;
+  const promotionTitle =
+    promotedRank === 'ceo' ? t('career.ceoReached.title') : t('career.promoted.title');
+  const promotionSubtitle =
+    promotedRank === 'ceo'
+      ? t('career.ceoReached.subtitle')
+      : promotedRank
+        ? t('career.promoted.subtitle', { rank: t(careerRankKey(promotedRank)) })
+        : '';
 
   const emphasizeLastMove = useMemo(() => {
     if (!board.lastMove || board.phase !== 'playing') {
@@ -392,18 +490,49 @@ export default function GameScreen() {
         <View style={styles.headerTopRow}>
           <View style={styles.headerSpacer} />
           <View style={styles.headerTitles}>
+            {board.phase === 'setup' ? (
+              <PlayerAvatar avatarId={playerAvatarId} size="lg" style={styles.setupAvatar} />
+            ) : null}
             <Text style={styles.title}>{t('common.title')}</Text>
+            {careerBadge ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push('/career')}
+              >
+                <Text style={styles.careerBadge}>{careerBadge}</Text>
+              </Pressable>
+            ) : null}
           </View>
-          <Pressable
-            style={styles.settingsButton}
-            onPress={() => router.push('/settings')}
-            accessibilityLabel={t('common.settings')}
-            accessibilityRole="button"
-          >
-            <SettingsIcon size={24} color={colors.textMuted} />
-          </Pressable>
+          {board.phase === 'setup' ? (
+            <Pressable
+              style={styles.settingsButton}
+              onPress={() => router.push('/settings')}
+              accessibilityLabel={t('common.settings')}
+              accessibilityRole="button"
+            >
+              <SettingsIcon size={24} color={colors.textMuted} />
+            </Pressable>
+          ) : (
+            <View style={styles.headerSpacer} />
+          )}
         </View>
         {board.phase !== 'setup' ? <ScoreDisplay board={board} /> : null}
+        {board.phase !== 'setup' ? (
+          <View style={styles.avatarRow}>
+            <View style={styles.avatarSlot}>
+              <PlayerAvatar avatarId={playerAvatarId} size="sm" />
+              <Text style={styles.avatarLabel}>
+                {gameMode === 'vsAi' ? t('common.player') : 'P1'}
+              </Text>
+            </View>
+            <View style={styles.avatarSlot}>
+              <PlayerAvatar avatarId={aiAvatarId} size="sm" />
+              <Text style={styles.avatarLabel}>
+                {gameMode === 'vsAi' ? t('common.ai') : 'P2'}
+              </Text>
+            </View>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.boardContainer}>
@@ -455,6 +584,8 @@ export default function GameScreen() {
       <View style={styles.footer}>
         <Text style={styles.phaseText}>{phaseLabel}</Text>
 
+        {careerMessage ? <Text style={styles.careerMessage}>{careerMessage}</Text> : null}
+
         {board.phase === 'setup' ? null : (
           <Text style={styles.turnText}>
             {t('game.moveCount', { count: board.moveCount + 1 })}
@@ -485,6 +616,15 @@ export default function GameScreen() {
           </Pressable>
         ) : null}
       </View>
+
+      <PromotionOverlay
+        visible={showPromotionOverlay}
+        title={promotionTitle}
+        subtitle={promotionSubtitle}
+        isCeo={promotedRank === 'ceo'}
+        playerAvatarId={playerAvatarId}
+        onComplete={() => setShowPromotionOverlay(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -508,6 +648,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
+  setupAvatar: {
+    marginBottom: 8,
+  },
   headerSpacer: {
     width: 44,
   },
@@ -515,6 +658,27 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     fontSize: 28,
     fontWeight: '700',
+  },
+  careerBadge: {
+    marginTop: 4,
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  avatarRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 28,
+    marginTop: 8,
+  },
+  avatarSlot: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  avatarLabel: {
+    color: colors.textMuted,
+    fontSize: 12,
+    fontWeight: '600',
   },
   settingsButton: {
     width: 44,
@@ -540,6 +704,12 @@ const styles = StyleSheet.create({
   phaseText: {
     color: colors.textMuted,
     fontSize: 14,
+    textAlign: 'center',
+  },
+  careerMessage: {
+    color: colors.gold,
+    fontSize: 14,
+    fontWeight: '600',
     textAlign: 'center',
   },
   button: {

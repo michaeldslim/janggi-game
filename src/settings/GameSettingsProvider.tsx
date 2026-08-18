@@ -8,6 +8,12 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import {
+  DEFAULT_AI_AVATAR_ID,
+  DEFAULT_PLAYER_AVATAR_ID,
+  resolveAvatarId,
+  type AvatarId,
+} from '../constants/avatars';
 import type { AiDifficulty, GameMode, Side } from '../types/janggi';
 
 export interface GameSettings {
@@ -15,6 +21,9 @@ export interface GameSettings {
   userSideVsAi: Side;
   player1SideLocal: Side;
   aiDifficulty: AiDifficulty;
+  playerAvatarId: AvatarId;
+  aiAvatarId: AvatarId;
+  careerModeEnabled: boolean;
 }
 
 export const DEFAULT_GAME_SETTINGS: GameSettings = {
@@ -22,6 +31,9 @@ export const DEFAULT_GAME_SETTINGS: GameSettings = {
   userSideVsAi: 'cho',
   player1SideLocal: 'cho',
   aiDifficulty: 'medium',
+  playerAvatarId: DEFAULT_PLAYER_AVATAR_ID,
+  aiAvatarId: DEFAULT_AI_AVATAR_ID,
+  careerModeEnabled: true,
 };
 
 export const GAME_SETTINGS_STORAGE_KEY = '@janggi/game-settings';
@@ -32,6 +44,9 @@ interface GameSettingsContextValue extends GameSettings {
   setUserSideVsAi: (side: Side) => void;
   setPlayer1SideLocal: (side: Side) => void;
   setAiDifficulty: (difficulty: AiDifficulty) => void;
+  setPlayerAvatarId: (avatarId: AvatarId) => void;
+  setAiAvatarId: (avatarId: AvatarId) => void;
+  setCareerModeEnabled: (enabled: boolean) => void;
 }
 
 const GameSettingsContext = createContext<GameSettingsContextValue | null>(null);
@@ -60,6 +75,10 @@ function parseStoredSettings(raw: string | null): GameSettings {
       userSideVsAi: parsed.userSideVsAi === 'han' ? 'han' : 'cho',
       player1SideLocal: parsed.player1SideLocal === 'han' ? 'han' : 'cho',
       aiDifficulty: parseAiDifficulty(parsed.aiDifficulty),
+      playerAvatarId: resolveAvatarId(parsed.playerAvatarId, DEFAULT_PLAYER_AVATAR_ID),
+      aiAvatarId: resolveAvatarId(parsed.aiAvatarId, DEFAULT_AI_AVATAR_ID),
+      careerModeEnabled:
+        typeof parsed.careerModeEnabled === 'boolean' ? parsed.careerModeEnabled : true,
     };
   } catch {
     return DEFAULT_GAME_SETTINGS;
@@ -97,48 +116,50 @@ export function GameSettingsProvider({ children }: { children: ReactNode }) {
     void AsyncStorage.setItem(GAME_SETTINGS_STORAGE_KEY, JSON.stringify(next));
   }, []);
 
-  const setGameMode = useCallback(
-    (mode: GameMode) => {
+  const updateSettings = useCallback(
+    (patch: Partial<GameSettings>) => {
       setSettings((current) => {
-        const next = { ...current, gameMode: mode };
+        const next = { ...current, ...patch };
         persistSettings(next);
         return next;
       });
     },
     [persistSettings],
+  );
+
+  const setGameMode = useCallback(
+    (mode: GameMode) => updateSettings({ gameMode: mode }),
+    [updateSettings],
   );
 
   const setUserSideVsAi = useCallback(
-    (side: Side) => {
-      setSettings((current) => {
-        const next = { ...current, userSideVsAi: side };
-        persistSettings(next);
-        return next;
-      });
-    },
-    [persistSettings],
+    (side: Side) => updateSettings({ userSideVsAi: side }),
+    [updateSettings],
   );
 
   const setPlayer1SideLocal = useCallback(
-    (side: Side) => {
-      setSettings((current) => {
-        const next = { ...current, player1SideLocal: side };
-        persistSettings(next);
-        return next;
-      });
-    },
-    [persistSettings],
+    (side: Side) => updateSettings({ player1SideLocal: side }),
+    [updateSettings],
   );
 
   const setAiDifficulty = useCallback(
-    (difficulty: AiDifficulty) => {
-      setSettings((current) => {
-        const next = { ...current, aiDifficulty: difficulty };
-        persistSettings(next);
-        return next;
-      });
-    },
-    [persistSettings],
+    (difficulty: AiDifficulty) => updateSettings({ aiDifficulty: difficulty }),
+    [updateSettings],
+  );
+
+  const setPlayerAvatarId = useCallback(
+    (avatarId: AvatarId) => updateSettings({ playerAvatarId: avatarId }),
+    [updateSettings],
+  );
+
+  const setAiAvatarId = useCallback(
+    (avatarId: AvatarId) => updateSettings({ aiAvatarId: avatarId }),
+    [updateSettings],
+  );
+
+  const setCareerModeEnabled = useCallback(
+    (enabled: boolean) => updateSettings({ careerModeEnabled: enabled }),
+    [updateSettings],
   );
 
   const value = useMemo(
@@ -149,8 +170,21 @@ export function GameSettingsProvider({ children }: { children: ReactNode }) {
       setUserSideVsAi,
       setPlayer1SideLocal,
       setAiDifficulty,
+      setPlayerAvatarId,
+      setAiAvatarId,
+      setCareerModeEnabled,
     }),
-    [isReady, setAiDifficulty, setGameMode, setPlayer1SideLocal, setUserSideVsAi, settings],
+    [
+      isReady,
+      setAiAvatarId,
+      setAiDifficulty,
+      setCareerModeEnabled,
+      setGameMode,
+      setPlayer1SideLocal,
+      setPlayerAvatarId,
+      setUserSideVsAi,
+      settings,
+    ],
   );
 
   return (
