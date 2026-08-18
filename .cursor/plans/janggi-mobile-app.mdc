@@ -1,6 +1,6 @@
 ---
 name: Janggi Mobile App
-overview: React Native + Expo + TypeScript로 한국 장기 모바일 앱 구현. Phase 1–2 및 게임플레이 확장(Phase 2.5) 완료. Phase 3(체크/체크메이트, 한수쉼) 진행 예정.
+overview: React Native + Expo + TypeScript로 한국 장기 모바일 앱 구현. Phase 1–5 완료.
 todos:
   - id: scaffold
     content: Expo + TypeScript 프로젝트 스캐폴딩 및 기본 폴더 구조
@@ -61,13 +61,16 @@ todos:
     status: completed
   - id: check-filter
     content: 체크 상태 필터링 — 자기 장을 위협하는 수 제거
-    status: pending
+    status: completed
   - id: checkmate
     content: 체크메이트 / stalemate 판정
-    status: pending
+    status: completed
   - id: pass-turn
     content: 한수쉼 (장이 체크가 아닐 때 패스)
-    status: pending
+    status: completed
+  - id: ai-difficulty
+    content: AI 난이도 선택 (쉬움/보통/어려움) 설정 + pickAiMove 연동
+    status: completed
 isProject: true
 ---
 
@@ -76,12 +79,13 @@ isProject: true
 ## Goals
 
 - **Platform**: React Native + Expo + TypeScript
-- **Release order**: Android first → iOS later (EAS build)
+- **Release order**: Android first
 - **Phase 1** ✅: 보드 + 장기알 렌더링, 표준 초기 배치, 말·상 교환
 - **Phase 2** ✅: 이동 규칙 엔진, 합법 수 UI, 턴 교대, 이동 효과음, 터치 개선
 - **Phase 2.5** ✅: AI 대전, 포획 트레이, 수 하이라이트, i18n/설정, 진영 선택, 애니메이션, 진영별 한자
-- **Phase 3 (현재)**: 체크/체크메이트 필터링, 한수쉼
-- **Phase 4+**: 비장, 점수(듬), 온라인 멀티플레이, iOS 배포
+- **Phase 3** ✅: 체크/체크메이트 필터링, 한수쉼
+- **Phase 4** ✅: 비장(bikjang), 점수(듬)
+- **Phase 5** ✅: AI 난이도 선택
 
 ---
 
@@ -94,7 +98,7 @@ isProject: true
 | Rendering | `react-native-svg` + RN `Animated` | 보드=SVG, 기물=오버레이 View (애니메이션) |
 | Audio | `expo-audio` | `useAudioPlayer` + `assets/sounds/stone.mp3` |
 | State | React `useState` / `useMemo` | Phase 3+에서 reducer 또는 Zustand 검토 |
-| Settings persistence | AsyncStorage | 언어, 진영 설정 (`@react-native-async-storage/async-storage`) |
+| Settings persistence | AsyncStorage | 언어, 진영, AI 난이도 (`@react-native-async-storage/async-storage`) |
 | i18n | Custom `I18nProvider` | `expo-localization` 기기 언어 감지 + `en`/`ko` 번역 파일 |
 | Navigation | Expo Router | `app/index.tsx` 게임, `app/settings.tsx` 설정 |
 | Touch | RN `Pressable` 오버레이 | SVG onPress 대신 넓은 히트 영역 (min 48px) |
@@ -107,14 +111,14 @@ isProject: true
 app/
   _layout.tsx          # I18nProvider + GameSettingsProvider + Stack
   index.tsx            # 게임 화면
-  settings.tsx         # 언어·진영 설정
+  settings.tsx         # 언어·진영·AI 난이도 설정
 src/
   components/          # Board, AnimatedPieceView, CapturedPiecesTray, ChipGroup, …
   constants/           # board, colors, pieces (getPieceHanja)
-  game/                # moves, applyMove, ai, palace, boardUtils
+  game/                # moves, applyMove, ai, aiDifficulty, palace, boardUtils
   hooks/               # useBoardLayout, useMoveSound
   i18n/                # translations (en/ko), I18nProvider
-  settings/            # GameSettingsProvider (진영 설정 persist)
+  settings/            # GameSettingsProvider (진영·난이도 persist)
   types/               # janggi.ts
   utils/               # coordinates, setup
 ```
@@ -197,18 +201,25 @@ Rank 9:  車 馬 象 士 楚 士 象 馬 車
 
 | Mode | 설명 |
 |------|------|
-| **vs AI** | 유저 vs 중간 난이도 AI. 설정에서 유저 진영(초/한) 선택. 선공은 항상 초. |
+| **vs AI** | 유저 vs AI. 설정에서 유저 진영·난이도 선택. 선공은 항상 초. |
 | **2 Players** | 로컬 2인 교대. 설정에서 플레이어 1 진영 선택. |
 
 ### AI (`src/game/ai.ts`)
 
 - 기물 가치 기반 포획·위협·전진 점수
-- 상위 4수 중 68% 최선 / 32% 랜덤 (중간 난이도)
+- 난이도별 상위 수 풀·최선 수 확률 (`src/game/aiDifficulty.ts`)
 - ~0.55초 딜레이 후 수 실행
+
+| 난이도 | 상위 수 풀 | 최선 수 확률 | 점수 노이즈 |
+|--------|-----------|-------------|------------|
+| 쉬움 | 8 | 25% | 4.0 |
+| 보통 | 4 | 68% | 2.5 |
+| 어려움 | 2 | 92% | 0.5 |
 
 ### Settings (`app/settings.tsx`)
 
 - **언어**: English / 한국어 (칩 토글, AsyncStorage 저장)
+- **AI 난이도**: 쉬움 / 보통 / 어려움
 - **AI 대전 진영**: 초(파랑) / 한(빨강)
 - **2인 대전 플레이어 1 진영**: 초 / 한
 - 게임 화면 우측 상단 ⚙ 기어 아이콘으로 진입
@@ -274,44 +285,72 @@ winner?: Side
 
 ### Not yet (→ Phase 3)
 
-- 체크 필터링 (자기 장을 노출하는 수 허용됨)
-- 체크메이트 / stalemate 판정 (장 포획 외 종료 조건)
-- 한수쉼
+- ~~체크 필터링~~ ✅
+- ~~체크메이트 / stalemate 판정~~ ✅
+- ~~한수쉼~~ ✅
 
 ---
 
-## Phase 3 — Next
+## Phase 3 — Complete ✅
 
 ### Tasks
 
 1. **`src/game/check.ts`** — 장 위치 탐색, 공격 받는지 판정
 2. **`getLegalMovesForPiece` 개선** — pseudo-legal → legal (체크 필터)
-3. **게임 종료** — 체크메이트 / stalemate → `phase: 'finished'`
-4. **한수쉼 UI** — 패스 버튼 (장이 체크가 아닐 때만)
-5. **체크 표시** — 장 알 하이라이트 또는 "Check!" 메시지
+3. **`src/game/endgame.ts`** — 체크메이트 / stalemate 판정
+4. **한수쉼** — `passTurn()` + 패스 버튼 (장이 체크가 아닐 때만)
+5. **체크 표시** — 장 알 빨간 링 + "Check!" / "장군!" 메시지
 
 ### Acceptance Criteria — Phase 3
 
-- [ ] 자기 장을 위협하는 수는 합법 수에서 제외
-- [ ] 상대 장을 잡는 수는 허용 (승리) — ✅ 장 포획 승리는 Phase 2.5에서 구현
-- [ ] 체크메이트 시 게임 종료 UI
-- [ ] 한수쉼 버튼 동작 (턴 넘김, moveCount 증가)
-- [ ] 체크 상태 시각적 표시
+- [x] 자기 장을 위협하는 수는 합법 수에서 제외
+- [x] 상대 장을 잡는 수는 허용 (승리)
+- [x] 체크메이트 시 게임 종료 UI
+- [x] 한수쉼 버튼 동작 (턴 넘김, moveCount 증가)
+- [x] 체크 상태 시각적 표시
 
 ---
 
-## Phase 4+ Roadmap
+## Phase 4 — Complete ✅
 
-| Phase | Scope |
-|-------|-------|
-| 4 | 비장(bikjang) 판정, 점수(듬) |
-| 5 | AI 난이도 선택, 온라인 멀티플레이 |
-| 6 | iOS 빌드 (EAS), 스토어 배포 |
+### Bikjang (`src/game/bikjang.ts`)
+- 양 장이 같은 file에서 사이에 기물 없이 마주보면 무승부
+- 비장을 만드는 수는 합법 수에서 제외
 
-### Special Rules (Phase 4+)
+### Scoring (`src/game/scoring.ts`)
+- 기물 점수: 차 13, 포 7, 마 5, 상 3, 사 3, 졸 2
+- 한(Han) 후공 1.5듬 덤
+- 연속 한수쉼 2회 시 점수 비교로 승패
+- 게임 중 `ScoreDisplay`로 실시간 점수 표시
 
-- **비장**: 양 장이 같은 file에서 사이에 기물 없이 마주보면 무승부
-- **듬**: 한(Han)이 후공 보상 1.5점
+### Acceptance Criteria — Phase 4
+- [x] 비장 판정 → 무승부 종료
+- [x] 비장 생성 수 필터링
+- [x] 듬 점수 계산 (한 +1.5듬)
+- [x] 점수 UI 표시
+- [x] 연속 패스 시 점수 승패
+
+---
+
+## Phase 5 — Complete ✅
+
+### AI Difficulty
+- `AiDifficulty`: `easy` | `medium` | `hard`
+- `src/game/aiDifficulty.ts` — 난이도별 파라미터
+- 설정 페이지 칩 UI (쉬움/보통/어려움), AsyncStorage 저장
+- `pickAiMove(board, side, difficulty)` 연동
+
+### Acceptance Criteria — Phase 5
+- [x] 설정에서 AI 난이도 선택
+- [x] 난이도 설정 AsyncStorage persist
+- [x] 쉬움/보통/어려움에 따라 AI 수 품질 변화
+
+---
+
+## Special Rules
+
+- ~~**비장**~~ ✅
+- ~~**듬**~~ ✅
 
 ---
 
@@ -366,8 +405,8 @@ winner?: Side
 - [x] 진영별 한자 (楚/漢, 卒/兵)
 - [x] 장 포획 시 게임 종료
 
----
+## Acceptance Criteria — Phase 5 ✅
 
-## Next Step
-
-**Phase 3** — `src/game/check.ts` 구현 후 `getLegalMovesForPiece`에 체크 필터 적용, 한수쉼 UI 추가.
+- [x] AI 난이도 설정 (쉬움/보통/어려움)
+- [x] 난이도 AsyncStorage 저장
+- [x] AI 대전 시 선택 난이도 적용
