@@ -149,4 +149,8 @@ eas update --channel production --message "Fix bug / update description"
 
 ## License
 
-Private project. Avatar artwork: see `assets/avatars/ATTRIBUTION.md`.
+Private project.
+
+**Avatar artwork:** see `assets/avatars/ATTRIBUTION.md`.
+
+**Piece glyphs:** The calligraphic Hanja glyphs in `src/constants/pieceGlyphs.ts` are derived from the [Kakao Janggi style white piece set](https://github.com/Kadagaden/chess-pieces) in the Kadagaden/chess-pieces repository (`janggi_kakao_janggi_style_white/`). License: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Only the character paths were extracted for in-app rendering; octagon piece backgrounds from the source SVGs are not used.
