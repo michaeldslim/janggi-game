@@ -1,9 +1,9 @@
-import type { BoardState, Piece, Position } from '../types/janggi';
+import type { BoardState, Piece, Position, Side } from '../types/janggi';
 import { getOppositeSide } from './boardUtils';
+import { isBikjang } from './bikjang';
 import { isInCheck } from './check';
-import { evaluateGameEnd } from './endgame';
+import { evaluateGameEnd, resolveByScore } from './endgame';
 import { isLegalMove } from './moves';
-import { compareScores } from './scoring';
 
 export function applyMove(
   board: BoardState,
@@ -110,21 +110,21 @@ export function passTurn(board: BoardState): BoardState {
   };
 
   if (consecutivePasses >= 2) {
-    const scoreResult = compareScores(nextBoard);
-
-    if (scoreResult.draw) {
+    if (isBikjang(nextBoard.pieces)) {
       return {
         ...nextBoard,
         phase: 'finished',
-        finishReason: 'score',
+        finishReason: 'bikjang',
       };
     }
+
+    const scoreResult = resolveByScore(nextBoard);
 
     return {
       ...nextBoard,
       phase: 'finished',
       winner: scoreResult.winner,
-      finishReason: 'score',
+      finishReason: scoreResult.finishReason,
     };
   }
 
@@ -139,4 +139,17 @@ export function passTurn(board: BoardState): BoardState {
   }
 
   return nextBoard;
+}
+
+export function resignGame(board: BoardState, resigningSide: Side): BoardState {
+  if (board.phase !== 'playing') {
+    return board;
+  }
+
+  return {
+    ...board,
+    phase: 'finished',
+    winner: getOppositeSide(resigningSide),
+    finishReason: 'resign',
+  };
 }

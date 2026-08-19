@@ -11,7 +11,13 @@ export type PieceType =
 
 export type GamePhase = 'setup' | 'playing' | 'finished';
 
-export type FinishReason = 'capture' | 'checkmate' | 'stalemate' | 'bikjang' | 'score';
+export type FinishReason =
+  | 'capture'
+  | 'checkmate'
+  | 'stalemate'
+  | 'bikjang'
+  | 'score'
+  | 'resign';
 
 export type GameMode = 'local' | 'vsAi';
 
