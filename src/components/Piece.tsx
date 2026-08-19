@@ -1,5 +1,6 @@
 import { Circle, G, Text as SvgText } from 'react-native-svg';
 import { getPieceHanja } from '../constants/pieces';
+import { getPieceLabelFontSize, getPieceRadius } from '../constants/pieceSize';
 import { colors } from '../constants/colors';
 import type { Piece } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
@@ -14,8 +15,9 @@ interface PieceViewProps {
 
 export function PieceView({ piece, layout, selected = false, lastMoved = false }: PieceViewProps) {
   const { x, y } = intersectionToPixel(piece.position.file, piece.position.rank, layout);
+  const radius = getPieceRadius(layout.pieceRadius, piece.type);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
-  const fontSize = layout.pieceRadius * 1.15;
+  const fontSize = getPieceLabelFontSize(radius);
 
   return (
     <G>
@@ -23,7 +25,7 @@ export function PieceView({ piece, layout, selected = false, lastMoved = false }
         <Circle
           cx={x}
           cy={y}
-          r={layout.pieceRadius + 5}
+          r={radius + 5}
           fill="none"
           stroke={colors.lastMoveRing}
           strokeWidth={3}
@@ -33,7 +35,7 @@ export function PieceView({ piece, layout, selected = false, lastMoved = false }
         <Circle
           cx={x}
           cy={y}
-          r={layout.pieceRadius + 4}
+          r={radius + 4}
           fill="none"
           stroke="#FACC15"
           strokeWidth={2.5}
@@ -42,7 +44,7 @@ export function PieceView({ piece, layout, selected = false, lastMoved = false }
       <Circle
         cx={x}
         cy={y}
-        r={layout.pieceRadius}
+        r={radius}
         fill={colors.pieceBackground}
         stroke={colors.pieceBorder}
         strokeWidth={1.5}

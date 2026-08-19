@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { getPieceHanja } from '../constants/pieces';
+import { getPieceLabelFontSize, getPieceRadius } from '../constants/pieceSize';
 import { colors } from '../constants/colors';
-import type { Piece } from '../types/janggi';
+import type { Piece, PieceType } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
 import { intersectionToPixel, positionsEqual } from '../utils/coordinates';
 import { getPieceLabelStyle } from './pieceLabelStyle';
@@ -21,9 +22,14 @@ interface AnimatedPieceViewProps {
   isCaptureTarget?: boolean;
 }
 
-function toPieceOrigin(file: number, rank: number, layout: BoardLayout) {
+function toPieceOrigin(
+  file: number,
+  rank: number,
+  layout: BoardLayout,
+  type: PieceType,
+) {
   const { x, y } = intersectionToPixel(file, rank, layout);
-  const radius = layout.pieceRadius;
+  const radius = getPieceRadius(layout.pieceRadius, type);
 
   return {
     x: x - radius,
@@ -67,16 +73,18 @@ export function AnimatedPieceView({
   inCheck = false,
   isCaptureTarget = false,
 }: AnimatedPieceViewProps) {
-  const radius = layout.pieceRadius;
+  const [displayType, setDisplayType] = useState(piece.type);
+  const radius = getPieceRadius(layout.pieceRadius, displayType);
   const diameter = radius * 2;
-  const fontSize = radius * 1.15;
+  const fontSize = getPieceLabelFontSize(radius);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
 
   const position = useRef(
-    new Animated.ValueXY(toPieceOrigin(piece.position.file, piece.position.rank, layout)),
+    new Animated.ValueXY(
+      toPieceOrigin(piece.position.file, piece.position.rank, layout, piece.type),
+    ),
   ).current;
   const scaleX = useRef(new Animated.Value(1)).current;
-  const [displayType, setDisplayType] = useState(piece.type);
   const [elevated, setElevated] = useState(false);
   const previousPosition = useRef(piece.position);
   const previousType = useRef(piece.type);
@@ -89,9 +97,11 @@ export function AnimatedPieceView({
       return;
     }
 
-    position.setValue(toPieceOrigin(piece.position.file, piece.position.rank, layout));
+    position.setValue(
+      toPieceOrigin(piece.position.file, piece.position.rank, layout, displayType),
+    );
     previousLayoutKey.current = layoutKey;
-  }, [layout, layoutKey, piece.position.file, piece.position.rank, position]);
+  }, [displayType, layout, layoutKey, piece.position.file, piece.position.rank, position]);
 
   useEffect(() => {
     if (!hasMounted.current) {
@@ -104,7 +114,12 @@ export function AnimatedPieceView({
       return;
     }
 
-    const target = toPieceOrigin(piece.position.file, piece.position.rank, layout);
+    const target = toPieceOrigin(
+      piece.position.file,
+      piece.position.rank,
+      layout,
+      piece.type,
+    );
     setElevated(true);
 
     Animated.parallel([
@@ -140,12 +155,17 @@ export function AnimatedPieceView({
 
     runFlip(
       scaleX,
-      () => setDisplayType(piece.type),
+      () => {
+        setDisplayType(piece.type);
+        position.setValue(
+          toPieceOrigin(piece.position.file, piece.position.rank, layout, piece.type),
+        );
+      },
       () => {
         previousType.current = piece.type;
       },
     );
-  }, [piece.type, scaleX]);
+  }, [layout, piece.position.file, piece.position.rank, piece.type, position, scaleX]);
 
   return (
     <Animated.View

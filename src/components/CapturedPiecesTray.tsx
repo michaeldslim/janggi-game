@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../constants/colors';
 import { getPieceHanja } from '../constants/pieces';
+import { getPieceLabelFontSize, getPieceRadius } from '../constants/pieceSize';
 import type { CapturedPiece } from '../types/janggi';
 import { getPieceLabelStyle } from './pieceLabelStyle';
 
@@ -12,14 +13,15 @@ interface CapturedPiecesTrayProps {
 
 function CapturedPieceChip({
   piece,
-  radius,
+  baseRadius,
 }: {
   piece: CapturedPiece;
-  radius: number;
+  baseRadius: number;
 }) {
+  const radius = getPieceRadius(baseRadius, piece.type);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
   const diameter = radius * 2;
-  const fontSize = radius * 1.1;
+  const fontSize = getPieceLabelFontSize(radius, 1.1);
 
   return (
     <View
@@ -44,7 +46,7 @@ export function CapturedPiecesTray({
   align,
   pieceRadius,
 }: CapturedPiecesTrayProps) {
-  const trayHeight = pieceRadius * 2 + 8;
+  const trayHeight = getPieceRadius(pieceRadius, 'general') * 2 + 8;
 
   return (
     <View
@@ -55,7 +57,7 @@ export function CapturedPiecesTray({
       ]}
     >
       {pieces.map((piece) => (
-        <CapturedPieceChip key={piece.id} piece={piece} radius={pieceRadius} />
+        <CapturedPieceChip key={piece.id} piece={piece} baseRadius={pieceRadius} />
       ))}
     </View>
   );
