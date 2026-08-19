@@ -9,8 +9,6 @@ interface GameEndMessageOverlayProps {
   message: string;
   subtitle?: string | null;
   variant: GameEndVariant;
-  width: number;
-  height: number;
 }
 
 const VARIANT_STYLES: Record<
@@ -44,8 +42,6 @@ export function GameEndMessageOverlay({
   message,
   subtitle,
   variant,
-  width,
-  height,
 }: GameEndMessageOverlayProps) {
   const backdropOpacity = useRef(new Animated.Value(0)).current;
   const bannerScale = useRef(new Animated.Value(0.72)).current;
@@ -107,10 +103,7 @@ export function GameEndMessageOverlay({
   }
 
   return (
-    <View
-      pointerEvents="none"
-      style={[styles.overlay, { width, height }]}
-    >
+    <View pointerEvents="none" style={styles.overlay}>
       <Animated.View style={[styles.backdrop, { opacity: backdropOpacity }]} />
       <Animated.View
         style={[
@@ -133,6 +126,8 @@ const styles = StyleSheet.create({
   overlay: {
     position: 'absolute',
     top: 0,
+    right: 0,
+    bottom: 0,
     left: 0,
     alignItems: 'center',
     justifyContent: 'center',

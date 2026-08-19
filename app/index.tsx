@@ -565,15 +565,6 @@ export default function GameScreen() {
             boardHeight={layout.height}
           />
 
-          <GameEndMessageOverlay
-            visible={board.phase === 'finished'}
-            message={gameEndMessage}
-            subtitle={careerMessage}
-            variant={gameEndVariant}
-            width={layout.width}
-            height={layout.height}
-          />
-
           {board.phase !== 'setup' ? (
             <CapturedPiecesTray
               pieces={board.captured.cho}
@@ -581,6 +572,13 @@ export default function GameScreen() {
               pieceRadius={layout.pieceRadius * 0.52}
             />
           ) : null}
+
+          <GameEndMessageOverlay
+            visible={board.phase === 'finished'}
+            message={gameEndMessage}
+            subtitle={careerMessage}
+            variant={gameEndVariant}
+          />
         </View>
       </View>
 
