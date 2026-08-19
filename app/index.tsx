@@ -61,7 +61,7 @@ export default function GameScreen() {
     careerModeEnabled,
   } = useGameSettings();
   const { careerState, loaded: careerLoaded, recordMatchResult } = useCareer();
-  const layout = useBoardLayout();
+  const { layout, isCompactPlayScreen } = useBoardLayout();
   const playMoveSound = useMoveSound();
   const [board, setBoard] = useState<BoardState>(() => createInitialBoard());
   const [selectedPieceId, setSelectedPieceId] = useState<string | null>(null);
@@ -521,13 +521,13 @@ export default function GameScreen() {
           <View style={[styles.avatarRow, board.phase === 'playing' && styles.avatarRowPlaying]}>
             <View style={styles.avatarSlot}>
               <PlayerAvatar avatarId={playerAvatarId} size="sm" />
-              <Text style={styles.avatarLabel}>
+              <Text style={[styles.avatarLabel, isCompactPlayScreen && styles.avatarLabelCompact]}>
                 {gameMode === 'vsAi' ? t('common.player') : 'P1'}
               </Text>
             </View>
             <View style={styles.avatarSlot}>
               <PlayerAvatar avatarId={aiAvatarId} size="sm" />
-              <Text style={styles.avatarLabel}>
+              <Text style={[styles.avatarLabel, isCompactPlayScreen && styles.avatarLabelCompact]}>
                 {gameMode === 'vsAi' ? t('common.ai') : 'P2'}
               </Text>
             </View>
@@ -583,7 +583,12 @@ export default function GameScreen() {
 
       <View style={styles.footer}>
         <Text
-          style={[styles.phaseText, board.phase === 'playing' && styles.phaseTextPlaying]}
+          style={[
+            styles.phaseText,
+            board.phase === 'setup' && styles.phaseTextSetup,
+            board.phase === 'playing' && styles.phaseTextPlaying,
+            isCompactPlayScreen && board.phase === 'playing' && styles.phaseTextCompact,
+          ]}
         >
           {phaseLabel}
         </Text>
@@ -698,6 +703,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  avatarLabelCompact: {
+    fontSize: 10,
+  },
   settingsButton: {
     width: 44,
     height: 44,
@@ -724,8 +732,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
   },
+  phaseTextSetup: {
+    fontSize: 12,
+  },
   phaseTextPlaying: {
     marginTop: 1,
+  },
+  phaseTextCompact: {
+    fontSize: 12,
   },
   careerMessage: {
     color: colors.gold,
