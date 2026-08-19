@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
-import { getPieceHanja } from '../constants/pieces';
-import { getPieceLabelFontSize, getPieceRadius } from '../constants/pieceSize';
+import { Animated, StyleSheet } from 'react-native';
+import { getPieceGlyphSize, getPieceRadius } from '../constants/pieceSize';
 import { colors } from '../constants/colors';
 import type { Piece, PieceType } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
 import { intersectionToPixel, positionsEqual } from '../utils/coordinates';
-import { getPieceLabelStyle } from './pieceLabelStyle';
+import { PieceGlyph } from './PieceGlyph';
+import { PieceOctagon, PieceOctagonRing } from './PieceOctagon';
 
 const FLIP_HALF_MS = 110;
 const MOVE_SPRING_SPEED = 22;
@@ -76,7 +76,7 @@ export function AnimatedPieceView({
   const [displayType, setDisplayType] = useState(piece.type);
   const radius = getPieceRadius(layout.pieceRadius, displayType);
   const diameter = radius * 2;
-  const fontSize = getPieceLabelFontSize(radius);
+  const glyphSize = getPieceGlyphSize(radius, displayType);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
 
   const position = useRef(
@@ -181,89 +181,57 @@ export function AnimatedPieceView({
       ]}
     >
       {lastMoved ? (
-        <View
-          style={[
-            styles.lastMovedRing,
-            {
-              width: diameter + 10,
-              height: diameter + 10,
-              borderRadius: radius + 5,
-              left: -5,
-              top: -5,
-            },
-          ]}
+        <PieceOctagonRing
+          radius={radius}
+          offset={5}
+          stroke={colors.lastMoveRing}
+          strokeWidth={3}
         />
       ) : null}
       {selected ? (
-        <View
-          style={[
-            styles.selectedRing,
-            {
-              width: diameter + 8,
-              height: diameter + 8,
-              borderRadius: radius + 4,
-              left: -4,
-              top: -4,
-            },
-          ]}
+        <PieceOctagonRing
+          radius={radius}
+          offset={4}
+          stroke="#FACC15"
+          strokeWidth={2.5}
         />
       ) : null}
       {inCheck ? (
-        <View
-          style={[
-            styles.checkRing,
-            {
-              width: diameter + 10,
-              height: diameter + 10,
-              borderRadius: radius + 5,
-              left: -5,
-              top: -5,
-            },
-          ]}
+        <PieceOctagonRing
+          radius={radius}
+          offset={5}
+          stroke={colors.checkRing}
+          strokeWidth={3}
         />
       ) : null}
       {isCaptureTarget ? (
-        <View
-          style={[
-            styles.captureGlow,
-            {
-              width: diameter + 14,
-              height: diameter + 14,
-              borderRadius: radius + 7,
-              left: -7,
-              top: -7,
-            },
-          ]}
+        <PieceOctagonRing
+          radius={radius}
+          offset={7}
+          fill={colors.captureTargetGlow}
         />
       ) : null}
       {isCaptureTarget ? (
-        <View
-          style={[
-            styles.captureRing,
-            {
-              width: diameter + 10,
-              height: diameter + 10,
-              borderRadius: radius + 5,
-              left: -5,
-              top: -5,
-            },
-          ]}
+        <PieceOctagonRing
+          radius={radius}
+          offset={5}
+          stroke={colors.captureTargetRing}
+          strokeWidth={3.5}
         />
       ) : null}
-      <View
-        style={[
-          styles.disc,
-          {
-            width: diameter,
-            height: diameter,
-            borderRadius: radius,
-          },
-        ]}
+      <PieceOctagon
+        radius={radius}
+        fill={colors.pieceBackground}
+        stroke={colors.pieceBorder}
+        strokeWidth={1.5}
       >
-        <Text style={getPieceLabelStyle(fontSize, textColor)}>
-          {getPieceHanja({ side: piece.side, type: displayType })}
-        </Text>
-      </View>
+        <PieceGlyph
+          side={piece.side}
+          type={displayType}
+          size={glyphSize}
+          color={textColor}
+        />
+      </PieceOctagon>
     </Animated.View>
   );
 }
@@ -271,36 +239,5 @@ export function AnimatedPieceView({
 const styles = StyleSheet.create({
   piece: {
     position: 'absolute',
-  },
-  disc: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.pieceBackground,
-    borderColor: colors.pieceBorder,
-    borderWidth: 1.5,
-  },
-  selectedRing: {
-    position: 'absolute',
-    borderColor: '#FACC15',
-    borderWidth: 2.5,
-  },
-  checkRing: {
-    position: 'absolute',
-    borderColor: colors.checkRing,
-    borderWidth: 3,
-  },
-  captureGlow: {
-    position: 'absolute',
-    backgroundColor: colors.captureTargetGlow,
-  },
-  captureRing: {
-    position: 'absolute',
-    borderColor: colors.captureTargetRing,
-    borderWidth: 3.5,
-  },
-  lastMovedRing: {
-    position: 'absolute',
-    borderColor: colors.lastMoveRing,
-    borderWidth: 3,
   },
 });

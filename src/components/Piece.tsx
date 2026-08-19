@@ -1,10 +1,11 @@
-import { Circle, G, Text as SvgText } from 'react-native-svg';
-import { getPieceHanja } from '../constants/pieces';
-import { getPieceLabelFontSize, getPieceRadius } from '../constants/pieceSize';
+import { G, Polygon } from 'react-native-svg';
+import { getPieceGlyphSize, getPieceRadius } from '../constants/pieceSize';
 import { colors } from '../constants/colors';
+import { getOctagonPoints } from '../utils/octagon';
 import type { Piece } from '../types/janggi';
 import type { BoardLayout } from '../utils/coordinates';
 import { intersectionToPixel } from '../utils/coordinates';
+import { PieceGlyphInSvg } from './PieceGlyph';
 
 interface PieceViewProps {
   piece: Piece;
@@ -17,48 +18,40 @@ export function PieceView({ piece, layout, selected = false, lastMoved = false }
   const { x, y } = intersectionToPixel(piece.position.file, piece.position.rank, layout);
   const radius = getPieceRadius(layout.pieceRadius, piece.type);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
-  const fontSize = getPieceLabelFontSize(radius);
+  const glyphSize = getPieceGlyphSize(radius, piece.type);
 
   return (
     <G>
       {lastMoved ? (
-        <Circle
-          cx={x}
-          cy={y}
-          r={radius + 5}
+        <Polygon
+          points={getOctagonPoints(x, y, radius + 5)}
           fill="none"
           stroke={colors.lastMoveRing}
           strokeWidth={3}
         />
       ) : null}
       {selected ? (
-        <Circle
-          cx={x}
-          cy={y}
-          r={radius + 4}
+        <Polygon
+          points={getOctagonPoints(x, y, radius + 4)}
           fill="none"
           stroke="#FACC15"
           strokeWidth={2.5}
         />
       ) : null}
-      <Circle
-        cx={x}
-        cy={y}
-        r={radius}
+      <Polygon
+        points={getOctagonPoints(x, y, radius)}
         fill={colors.pieceBackground}
         stroke={colors.pieceBorder}
         strokeWidth={1.5}
       />
-      <SvgText
+      <PieceGlyphInSvg
+        side={piece.side}
+        type={piece.type}
+        size={glyphSize}
+        color={textColor}
         x={x}
-        y={y + fontSize * 0.35}
-        fill={textColor}
-        fontSize={fontSize}
-        fontWeight="700"
-        textAnchor="middle"
-      >
-        {getPieceHanja(piece)}
-      </SvgText>
+        y={y}
+      />
     </G>
   );
 }

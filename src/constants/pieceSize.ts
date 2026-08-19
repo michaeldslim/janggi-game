@@ -19,6 +19,17 @@ export function getPieceRadius(baseRadius: number, type: PieceType): number {
   return baseRadius * PIECE_SIZE_MULTIPLIERS[type];
 }
 
-export function getPieceLabelFontSize(radius: number, baseScale = 1.15): number {
-  return Math.max(1, radius * baseScale - 1);
+/** Glyph size as a fraction of piece diameter. */
+const PIECE_GLYPH_SCALES: Record<PieceType, number> = {
+  soldier: 0.78,
+  guard: 0.78,
+  general: 0.78,
+  chariot: 0.78,
+  horse: 0.78,
+  elephant: 0.78,
+  cannon: 0.78,
+};
+
+export function getPieceGlyphSize(radius: number, type: PieceType): number {
+  return radius * 2 * PIECE_GLYPH_SCALES[type];
 }

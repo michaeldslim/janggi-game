@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { colors } from '../constants/colors';
-import { getPieceHanja } from '../constants/pieces';
-import { getPieceLabelFontSize, getPieceRadius } from '../constants/pieceSize';
+import { getPieceGlyphSize, getPieceRadius } from '../constants/pieceSize';
 import type { CapturedPiece } from '../types/janggi';
-import { getPieceLabelStyle } from './pieceLabelStyle';
+import { PieceGlyph } from './PieceGlyph';
+import { PieceOctagon } from './PieceOctagon';
 
 interface CapturedPiecesTrayProps {
   pieces: CapturedPiece[];
@@ -20,24 +20,22 @@ function CapturedPieceChip({
 }) {
   const radius = getPieceRadius(baseRadius, piece.type);
   const textColor = piece.side === 'cho' ? colors.choPieceText : colors.hanPieceText;
-  const diameter = radius * 2;
-  const fontSize = getPieceLabelFontSize(radius, 1.1);
+  const glyphSize = getPieceGlyphSize(radius, piece.type);
 
   return (
-    <View
-      style={[
-        styles.chip,
-        {
-          width: diameter,
-          height: diameter,
-          borderRadius: radius,
-        },
-      ]}
+    <PieceOctagon
+      radius={radius}
+      fill={colors.pieceBackground}
+      stroke={colors.pieceBorder}
+      strokeWidth={1}
     >
-      <Text style={getPieceLabelStyle(fontSize, textColor)}>
-        {getPieceHanja(piece)}
-      </Text>
-    </View>
+      <PieceGlyph
+        side={piece.side}
+        type={piece.type}
+        size={glyphSize}
+        color={textColor}
+      />
+    </PieceOctagon>
   );
 }
 
@@ -77,12 +75,5 @@ const styles = StyleSheet.create({
   bottomRight: {
     alignSelf: 'flex-end',
     justifyContent: 'flex-end',
-  },
-  chip: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.pieceBackground,
-    borderColor: colors.pieceBorder,
-    borderWidth: 1,
   },
 });
