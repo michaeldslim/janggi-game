@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { BoardWithPieces } from '../src/components/BoardWithPieces';
 import { CapturedPiecesTray } from '../src/components/CapturedPiecesTray';
 import { CheckMessageOverlay } from '../src/components/CheckMessageOverlay';
+import { GameEndMessageOverlay } from '../src/components/GameEndMessageOverlay';
 import { MeonggunMessageOverlay } from '../src/components/MeonggunMessageOverlay';
 import { PlayerAvatar } from '../src/components/PlayerAvatar';
 import { PromotionOverlay } from '../src/components/PromotionOverlay';
@@ -23,6 +24,11 @@ import { getAiThinkDelayMs } from '../src/game/aiSpeed';
 import { applyMove, passTurn, resignGame } from '../src/game/applyMove';
 import { getOppositeSide } from '../src/game/boardUtils';
 import { isInCheck } from '../src/game/check';
+import {
+  getGameEndMessage,
+  getGameEndVariant,
+  isGameDraw,
+} from '../src/game/gameEndMessage';
 import { getLegalMovesForPiece } from '../src/game/moves';
 import { useBoardLayout } from '../src/hooks/useBoardLayout';
 import { useMoveSound } from '../src/hooks/useMoveSound';
@@ -40,11 +46,7 @@ import {
 } from '../src/utils/setup';
 
 function isCareerDraw(board: BoardState): boolean {
-  if (board.finishReason === 'stalemate' || board.finishReason === 'bikjang') {
-    return true;
-  }
-
-  return board.finishReason === 'score' && board.winner === undefined;
+  return isGameDraw(board);
 }
 
 export default function GameScreen() {
@@ -396,72 +398,7 @@ export default function GameScreen() {
 
   const phaseLabel = useMemo(() => {
     if (board.phase === 'finished') {
-      if (board.finishReason === 'bikjang') {
-        return t('game.bikjang');
-      }
-
-      if (board.finishReason === 'score') {
-        if (!board.winner) {
-          return t('game.drawByScore');
-        }
-
-        if (gameMode === 'vsAi') {
-          return board.winner === userSide
-            ? t('game.youWinScore')
-            : t('game.aiWinsScore');
-        }
-
-        return t('game.sideWinsScore', {
-          side: sideLabel(board.winner, true),
-        });
-      }
-
-      if (board.finishReason === 'stalemate') {
-        return t('game.stalemate');
-      }
-
-      if (board.finishReason === 'resign') {
-        if (gameMode === 'vsAi') {
-          return t('game.youResigned');
-        }
-
-        const resigningSide = board.winner ? getOppositeSide(board.winner) : board.turn;
-        return t('game.sideResigned', {
-          side: sideLabel(resigningSide, true),
-        });
-      }
-
-      if (board.finishReason === 'capture') {
-        if (gameMode === 'vsAi') {
-          return board.winner === userSide
-            ? t('game.youWinCapture')
-            : t('game.aiWinsCapture');
-        }
-
-        return t('game.sideWinsCapture', {
-          side: sideLabel(board.winner ?? 'cho', true),
-        });
-      }
-
-      if (board.finishReason === 'checkmate') {
-        if (gameMode === 'vsAi') {
-          return board.winner === userSide
-            ? t('game.youWinCheckmate')
-            : t('game.aiWinsCheckmate');
-        }
-
-        return t('game.sideWinsCheckmate', {
-          side: sideLabel(board.winner ?? 'cho', true),
-        });
-      }
-
-      if (gameMode === 'vsAi') {
-        return board.winner === userSide ? t('game.youWin') : t('game.aiWins');
-      }
-
-      return t('game.sideWins', {
-        side: sideLabel(board.winner ?? 'cho', true),
-      });
+      return '';
     }
 
     if (board.phase === 'setup') {
@@ -513,9 +450,7 @@ export default function GameScreen() {
   }, [
     board.lastMove,
     board.phase,
-    board.finishReason,
     board.turn,
-    board.winner,
     emphasizeLastMove,
     gameMode,
     isAiThinking,
@@ -526,6 +461,22 @@ export default function GameScreen() {
     t,
     userSide,
   ]);
+
+  const gameEndMessage = useMemo(() => {
+    if (board.phase !== 'finished') {
+      return '';
+    }
+
+    return getGameEndMessage(board, gameMode, userSide, t, sideLabel);
+  }, [board, gameMode, sideLabel, t, userSide]);
+
+  const gameEndVariant = useMemo(() => {
+    if (board.phase !== 'finished') {
+      return 'neutral' as const;
+    }
+
+    return getGameEndVariant(board, gameMode, userSide);
+  }, [board, gameMode, userSide]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -614,6 +565,15 @@ export default function GameScreen() {
             boardHeight={layout.height}
           />
 
+          <GameEndMessageOverlay
+            visible={board.phase === 'finished'}
+            message={gameEndMessage}
+            subtitle={careerMessage}
+            variant={gameEndVariant}
+            width={layout.width}
+            height={layout.height}
+          />
+
           {board.phase !== 'setup' ? (
             <CapturedPiecesTray
               pieces={board.captured.cho}
@@ -625,18 +585,18 @@ export default function GameScreen() {
       </View>
 
       <View style={styles.footer}>
-        <Text
-          style={[
-            styles.phaseText,
-            board.phase === 'setup' && styles.phaseTextSetup,
-            board.phase === 'playing' && styles.phaseTextPlaying,
-            isCompactPlayScreen && board.phase === 'playing' && styles.phaseTextCompact,
-          ]}
-        >
-          {phaseLabel}
-        </Text>
-
-        {careerMessage ? <Text style={styles.careerMessage}>{careerMessage}</Text> : null}
+        {phaseLabel ? (
+          <Text
+            style={[
+              styles.phaseText,
+              board.phase === 'setup' && styles.phaseTextSetup,
+              board.phase === 'playing' && styles.phaseTextPlaying,
+              isCompactPlayScreen && board.phase === 'playing' && styles.phaseTextCompact,
+            ]}
+          >
+            {phaseLabel}
+          </Text>
+        ) : null}
 
         {board.phase === 'setup' ? null : (
           <Text style={styles.turnText}>
@@ -788,12 +748,6 @@ const styles = StyleSheet.create({
   },
   phaseTextCompact: {
     fontSize: 12,
-  },
-  careerMessage: {
-    color: colors.gold,
-    fontSize: 14,
-    fontWeight: '600',
-    textAlign: 'center',
   },
   button: {
     backgroundColor: colors.button,
