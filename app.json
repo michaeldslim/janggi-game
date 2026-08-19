@@ -2,7 +2,7 @@
   "expo": {
     "name": "Janggi",
     "slug": "janggi-game",
-    "version": "2.2.0",
+    "version": "2.5.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "scheme": "janggi",
@@ -31,7 +31,7 @@
     "updates": {
       "url": "https://u.expo.dev/d6e7817c-64a0-43c2-88a6-5e6a505a086b"
     },
-    "runtimeVersion": "2.2.0",
+    "runtimeVersion": "2.5.0",
     "extra": {
       "router": {},
       "eas": {
