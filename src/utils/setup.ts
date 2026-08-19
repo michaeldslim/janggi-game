@@ -6,9 +6,12 @@ import {
 import {
   CHO_BACK_RANK,
   CHO_CANNON_RANK,
+  CHO_GENERAL_RANK,
   CHO_SOLDIER_RANK,
+  GENERAL_FILE,
   HAN_BACK_RANK,
   HAN_CANNON_RANK,
+  HAN_GENERAL_RANK,
   HAN_SOLDIER_RANK,
   SWAP_FILE_PAIRS,
 } from '../constants/board';
@@ -60,6 +63,10 @@ function createSidePieces(side: Side, sideSwaps: SideSwapState): Piece[] {
 
   for (let file = 0; file < BACK_RANK_TYPES.length; file += 1) {
     const type = getBackRankType(file, sideSwaps);
+    if (type === 'general') {
+      continue;
+    }
+
     pieces.push({
       id: `${side}-back-${backRank}-${file}`,
       side,
@@ -67,6 +74,16 @@ function createSidePieces(side: Side, sideSwaps: SideSwapState): Piece[] {
       position: { file, rank: backRank },
     });
   }
+
+  pieces.push({
+    id: `${side}-general`,
+    side,
+    type: 'general',
+    position: {
+      file: GENERAL_FILE,
+      rank: isHan ? HAN_GENERAL_RANK : CHO_GENERAL_RANK,
+    },
+  });
 
   for (const file of CANNON_FILES) {
     pieces.push({
@@ -107,6 +124,10 @@ export function getSwapWingForPiece(piece: Piece): SwapWing | null {
   const backRank = piece.side === 'han' ? HAN_BACK_RANK : CHO_BACK_RANK;
 
   if (piece.position.rank !== backRank) {
+    return null;
+  }
+
+  if (piece.type !== 'horse' && piece.type !== 'elephant') {
     return null;
   }
 

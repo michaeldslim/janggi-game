@@ -18,12 +18,16 @@ export const CHO_PALACE = {
 } as const;
 
 export const HAN_BACK_RANK = 0;
-export const HAN_CANNON_RANK = 1;
-export const HAN_SOLDIER_RANK = 2;
+export const HAN_CANNON_RANK = 2;
+export const HAN_SOLDIER_RANK = 3;
+export const HAN_GENERAL_RANK = 1;
 
-export const CHO_SOLDIER_RANK = 7;
-export const CHO_CANNON_RANK = 8;
+export const CHO_SOLDIER_RANK = 6;
+export const CHO_CANNON_RANK = 7;
 export const CHO_BACK_RANK = 9;
+export const CHO_GENERAL_RANK = 8;
+
+export const GENERAL_FILE = 4;
 
 export const SWAP_FILE_PAIRS: [number, number][] = [
   [1, 2],
