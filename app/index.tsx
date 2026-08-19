@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { BoardWithPieces } from '../src/components/BoardWithPieces';
 import { CapturedPiecesTray } from '../src/components/CapturedPiecesTray';
@@ -20,7 +20,7 @@ import { colors } from '../src/constants/colors';
 import { getPieceHanja } from '../src/constants/pieces';
 import { pickAiMove } from '../src/game/ai';
 import { getAiThinkDelayMs } from '../src/game/aiSpeed';
-import { applyMove, passTurn } from '../src/game/applyMove';
+import { applyMove, passTurn, resignGame } from '../src/game/applyMove';
 import { getOppositeSide } from '../src/game/boardUtils';
 import { isInCheck } from '../src/game/check';
 import { getLegalMovesForPiece } from '../src/game/moves';
@@ -261,6 +261,26 @@ export default function GameScreen() {
     setSelectedPieceId(null);
   }, [canPassTurn]);
 
+  const handleResign = useCallback(() => {
+    if (board.phase !== 'playing') {
+      return;
+    }
+
+    const resigningSide: Side = gameMode === 'vsAi' ? userSide : board.turn;
+
+    Alert.alert(t('game.resignConfirmTitle'), t('game.resignConfirmMessage'), [
+      { text: t('game.cancel'), style: 'cancel' },
+      {
+        text: t('game.resign'),
+        style: 'destructive',
+        onPress: () => {
+          setBoard((current) => resignGame(current, resigningSide));
+          setSelectedPieceId(null);
+        },
+      },
+    ]);
+  }, [board.phase, board.turn, gameMode, t, userSide]);
+
   useEffect(() => {
     if (
       gameMode !== 'vsAi' ||
@@ -398,6 +418,29 @@ export default function GameScreen() {
 
       if (board.finishReason === 'stalemate') {
         return t('game.stalemate');
+      }
+
+      if (board.finishReason === 'resign') {
+        if (gameMode === 'vsAi') {
+          return t('game.youResigned');
+        }
+
+        const resigningSide = board.winner ? getOppositeSide(board.winner) : board.turn;
+        return t('game.sideResigned', {
+          side: sideLabel(resigningSide, true),
+        });
+      }
+
+      if (board.finishReason === 'capture') {
+        if (gameMode === 'vsAi') {
+          return board.winner === userSide
+            ? t('game.youWinCapture')
+            : t('game.aiWinsCapture');
+        }
+
+        return t('game.sideWinsCapture', {
+          side: sideLabel(board.winner ?? 'cho', true),
+        });
       }
 
       if (board.finishReason === 'checkmate') {
@@ -614,20 +657,25 @@ export default function GameScreen() {
         ) : null}
 
         {board.phase === 'playing' ? (
-          <Pressable
-            style={[styles.passButton, !canPassTurn && styles.passButtonDisabled]}
-            onPress={handlePassTurn}
-            disabled={!canPassTurn}
-          >
-            <Text
-              style={[
-                styles.passButtonText,
-                !canPassTurn && styles.passButtonTextDisabled,
-              ]}
+          <View style={styles.actionRow}>
+            <Pressable
+              style={[styles.actionButton, !canPassTurn && styles.actionButtonDisabled]}
+              onPress={handlePassTurn}
+              disabled={!canPassTurn}
             >
-              {t('game.passTurn')}
-            </Text>
-          </Pressable>
+              <Text
+                style={[
+                  styles.actionButtonText,
+                  !canPassTurn && styles.actionButtonTextDisabled,
+                ]}
+              >
+                {t('game.passTurn')}
+              </Text>
+            </Pressable>
+            <Pressable style={styles.resignButton} onPress={handleResign}>
+              <Text style={styles.resignButtonText}>{t('game.resign')}</Text>
+            </Pressable>
+          </View>
         ) : null}
 
         {board.phase === 'finished' ? (
@@ -758,23 +806,41 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  passButton: {
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionButton: {
+    flex: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: colors.textMuted,
     paddingVertical: 12,
     alignItems: 'center',
   },
-  passButtonDisabled: {
+  actionButtonDisabled: {
     opacity: 0.35,
   },
-  passButtonText: {
+  actionButtonText: {
     color: colors.textPrimary,
     fontSize: 15,
     fontWeight: '600',
   },
-  passButtonTextDisabled: {
+  actionButtonTextDisabled: {
     color: colors.textMuted,
+  },
+  resignButton: {
+    flex: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.textMuted,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  resignButtonText: {
+    color: colors.textMuted,
+    fontSize: 15,
+    fontWeight: '600',
   },
   turnText: {
     color: colors.textPrimary,
