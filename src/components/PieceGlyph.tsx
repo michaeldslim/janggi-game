@@ -19,6 +19,7 @@ function getGlyphPathProps(side: Side, type: PieceType, color: string) {
 
   return {
     viewBox: glyph.viewBox,
+    renderScale: glyph.renderScale ?? 1,
     pathProps: {
       d: glyph.d,
       fill: color,
@@ -30,8 +31,8 @@ function getGlyphPathProps(side: Side, type: PieceType, color: string) {
 }
 
 export function PieceGlyph({ side, type, size, color }: PieceGlyphProps) {
-  const { viewBox, pathProps } = getGlyphPathProps(side, type, color);
-  const renderSize = normalizeGlyphSize(size, viewBox);
+  const { viewBox, renderScale, pathProps } = getGlyphPathProps(side, type, color);
+  const renderSize = normalizeGlyphSize(size, viewBox) * renderScale;
 
   return (
     <Svg width={renderSize} height={renderSize} viewBox={viewBox}>
@@ -54,8 +55,8 @@ export function PieceGlyphInSvg({
   x,
   y,
 }: PieceGlyphInSvgProps) {
-  const { viewBox, pathProps } = getGlyphPathProps(side, type, color);
-  const renderSize = normalizeGlyphSize(size, viewBox);
+  const { viewBox, renderScale, pathProps } = getGlyphPathProps(side, type, color);
+  const renderSize = normalizeGlyphSize(size, viewBox) * renderScale;
 
   return (
     <Svg
